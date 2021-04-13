@@ -19,6 +19,13 @@ function targetSubPath(targetMcu) {
         return "stm32/f1";
 }
 
+function targetDefine(targetMcu) {
+    if (targetMcu === "stm32f0")
+        return "STM32F0";
+    else if (targetMcu === "stm32f1")
+        return "STM32F1";
+}
+
 function libopencm3SubPath(targetMcu) {
     return FileInfo.joinPaths("libopencm3", targetSubPath(targetMcu));
 }

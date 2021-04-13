@@ -18,11 +18,13 @@ Project {
         }
 
         property path generatedPath: buildDirectory + "/generated"
+        property string includeBase: project.libopencm3SourcesPath + "/include"
+        property string defineBase: LIBOPENCM3.targetDefine(project.targetMcu)
 
         Depends { name: "cpp" }
         cpp.cLanguageVersion: "c99"
         cpp.positionIndependentCode: false
-        cpp.includePaths: [project.libopencm3SourcesPath + "/include"]
+        cpp.includePaths: [product.includeBase]
 
         cpp.commonCompilerFlags: [
             "-Wextra",
@@ -43,7 +45,7 @@ Project {
                 "-fno-common",
                 "-mthumb",
             ]
-            cpp.defines: ["STM32F1"]
+            cpp.defines: [defineBase]
         }
 
         Group {
@@ -155,6 +157,12 @@ Project {
             outputFileTags: ["nvic_hpp", "cmsis_hpp", "nvic_cpp", "hpp"]
             outputArtifacts: LIBOPENCM3.nvicGeneratorOutputArtifacts(project, product)
             prepare: LIBOPENCM3.prepareNvicGenerator.apply(LIBOPENCM3, arguments)
+        }
+
+        Export {
+            Depends { name: "cpp" }
+            cpp.includePaths: [product.includeBase]
+            cpp.defines: [product.defineBase]
         }
     }
 }
