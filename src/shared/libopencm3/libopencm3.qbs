@@ -18,7 +18,7 @@ Project {
         }
 
         property path generatedPath: buildDirectory + "/generated"
-        property string includeBase: project.libopencm3SourcesPath + "/include"
+        property path includeBase: project.libopencm3SourcesPath + "/include"
         property string defineBase: LIBOPENCM3.targetDefine(project.targetMcu)
 
         Depends { name: "cpp" }
@@ -39,10 +39,10 @@ Project {
         Properties {
             condition: project.targetMcu === "stm32f1"
             cpp.driverFlags: [
-                "-mcpu=cortex-m3",
                 "-fdata-sections",
                 "-ffunction-sections",
                 "-fno-common",
+                "-mcpu=cortex-m3",
                 "-mthumb",
             ]
             cpp.defines: [defineBase]
@@ -161,7 +161,7 @@ Project {
 
         Export {
             Depends { name: "cpp" }
-            cpp.includePaths: [product.includeBase]
+            cpp.includePaths: [product.includeBase, product.generatedPath]
             cpp.defines: [product.defineBase]
         }
     }
