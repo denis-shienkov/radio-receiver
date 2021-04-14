@@ -45,7 +45,11 @@ CppApplication {
         ]
     }
 
-    files: ["fwapp.c"]
+    files: [
+        "fwapp.c",
+        "fwapp_systick.c",
+        "fwapp_systick.h",
+    ]
 
     Group {
         name: "Linker scripts"
