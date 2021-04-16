@@ -1,15 +1,10 @@
-#ifndef FWAPP_USB_COMPOSITE_H
-#define FWAPP_USB_COMPOSITE_H
-
-#include <stdbool.h>
-#include <stdint.h>
+#ifndef FWAPP_USB_H
+#define FWAPP_USB_H
 
 // Device descriptor defines.
 
 // USB BCD version.
 #define USB_BCD_2                   0x0200 // 2.0
-// USB HID BCD version.
-#define USB_BCD_HID                 0x0100 // 1.0
 
 // USB device classe.
 #define USB_CLASS_MISC              0xEF
@@ -46,22 +41,13 @@
 // USB maximum power.
 #define USB_MAX_POWER               0x32
 
-// USB HID endpoint addresses.
-#define USB_HID_EP_COUNT            2
-#define USB_HID_EP_IN_ADDRESS       0x81
-#define USB_HID_EP_OUT_ADDRESS      0x01
-// USB HID endpoint buffer size.
-#define USB_HID_EP_LENGTH           64
-// USB HID endpoint polling interval (16 ms).
-#define USB_HID_EP_POLL_INTERVAL    0x20
-
 // USB control buffer length.
 // This needs to be big enough to hold any descriptor,
 // the largest of which will be the configuration descriptor.
 #define USB_CONTROL_BUFFER_LENGTH   512
 
-void fwapp_usb_composite_start(void);
-void fwapp_usb_composite_stop(void);
-void fwapp_usb_composite_schedule(void);
+void fwapp_usb_start(void);
+void fwapp_usb_stop(void);
+void fwapp_usb_schedule(void);
 
-#endif // FWAPP_USB_COMPOSITE_H
+#endif // FWAPP_USB_H

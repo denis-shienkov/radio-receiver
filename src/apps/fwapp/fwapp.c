@@ -1,6 +1,6 @@
 #include "fwapp_led.h"
 #include "fwapp_systick.h"
-#include "fwapp_usb_composite.h"
+#include "fwapp_usb.h"
 
 #include <libopencm3/stm32/rcc.h>
 
@@ -12,11 +12,11 @@ int main(void)
 
     fwapp_led_start(5);
     fwapp_systick_start(1000);
-    fwapp_usb_composite_start();
+    fwapp_usb_start();
 
     while (1) {
         fwapp_led_schedule();
-        fwapp_usb_composite_schedule();
+        fwapp_usb_schedule();
     }
 
     return 0;

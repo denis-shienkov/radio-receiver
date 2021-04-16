@@ -51,8 +51,12 @@ CppApplication {
         "fwapp_led.h",
         "fwapp_systick.c",
         "fwapp_systick.h",
-        "fwapp_usb_composite.c",
-        "fwapp_usb_composite.h",
+        "fwapp_uac.c",
+        "fwapp_uac.h",
+        "fwapp_usb.c",
+        "fwapp_usb.h",
+        "fwapp_hid.c",
+        "fwapp_hid.h",
     ]
 
     Group {
