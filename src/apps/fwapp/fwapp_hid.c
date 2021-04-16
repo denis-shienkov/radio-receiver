@@ -37,21 +37,25 @@ static const uint8_t m_hid_report_dsc[] = {
     0xc0                           // END_COLLECTION
 };
 
+struct usb_hid_report {
+    uint8_t bReportDescriptorType;
+    uint16_t wDescriptorLength;
+} __attribute__((packed));
+
 static const struct {
-    struct usb_hid_descriptor hid_descriptor;
-    struct {
-        uint8_t bReportDescriptorType;
-        uint16_t wDescriptorLength;
-    } __attribute__((packed)) hid_report;
+    struct usb_hid_descriptor hid_dsc;
+    struct usb_hid_report hid_rep;
 } __attribute__((packed)) m_hid_function = {
-    .hid_descriptor = {
+
+    .hid_dsc = {
         .bLength = sizeof(m_hid_function),
         .bDescriptorType = USB_DT_HID,
         .bcdHID = USB_BCD_HID,
         .bCountryCode = 0,
         .bNumDescriptors = 1,
         },
-    .hid_report = {
+
+    .hid_rep = {
         .bReportDescriptorType = USB_DT_REPORT,
         .wDescriptorLength = sizeof(m_hid_report_dsc),
         }
