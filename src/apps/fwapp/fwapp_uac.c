@@ -16,7 +16,7 @@ const struct usb_interface_descriptor g_uac_iface_dsc = {
 };
 
 static enum usbd_request_return_codes fwapp_uac_control_request_cb(
-    usbd_device *usbd_dev,
+    usbd_device *dev,
     struct usb_setup_data *req,
     uint8_t **buf,
     uint16_t *len,
@@ -25,7 +25,7 @@ static enum usbd_request_return_codes fwapp_uac_control_request_cb(
     (void)buf;
     (void)complete;
     (void)len;
-    (void)usbd_dev;
+    (void)dev;
 
     enum { EXPECTED_BM_REQ_TYPE = USB_REQ_TYPE_VENDOR };
     if (req->bmRequestType != EXPECTED_BM_REQ_TYPE)
@@ -33,12 +33,12 @@ static enum usbd_request_return_codes fwapp_uac_control_request_cb(
     return USBD_REQ_HANDLED;
 }
 
-void fwapp_uac_ep_setup(usbd_device *usbd_dev)
+void fwapp_uac_ep_setup(usbd_device *dev)
 {
     // TODO: Setup endpoints here.
 
     usbd_register_control_callback(
-        usbd_dev,
+        dev,
         USB_REQ_TYPE_VENDOR,
         USB_REQ_TYPE_TYPE,
         fwapp_uac_control_request_cb);

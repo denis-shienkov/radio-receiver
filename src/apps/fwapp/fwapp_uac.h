@@ -5,6 +5,6 @@
 
 extern const struct usb_interface_descriptor g_uac_iface_dsc;
 
-void fwapp_uac_ep_setup(usbd_device *usbd_dev);
+void fwapp_uac_ep_setup(usbd_device *dev);
 
 #endif // FWAPP_UAC_H
