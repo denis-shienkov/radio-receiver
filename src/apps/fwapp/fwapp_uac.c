@@ -33,7 +33,7 @@ static enum usbd_request_return_codes fwapp_uac_control_request_cb(
     return USBD_REQ_HANDLED;
 }
 
-void fwapp_uac_ep_setup(usbd_device *dev)
+void fwapp_uac_setup(usbd_device *dev)
 {
     // TODO: Setup endpoints here.
 
