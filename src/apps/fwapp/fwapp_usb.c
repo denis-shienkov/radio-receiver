@@ -77,12 +77,12 @@ static void fwapp_usb_reenumerate(void)
     }
 }
 
-static void fwapp_usb_set_config_cb(usbd_device *usbd_dev, uint16_t wValue)
+static void fwapp_usb_set_config_cb(usbd_device *dev, uint16_t wValue)
 {
     (void)wValue;
 
-    fwapp_hid_ep_setup(usbd_dev);
-    fwapp_uac_ep_setup(usbd_dev);
+    fwapp_hid_ep_setup(dev);
+    fwapp_uac_ep_setup(dev);
 }
 
 static void fwapp_usb_setup(void)
