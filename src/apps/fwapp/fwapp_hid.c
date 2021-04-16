@@ -24,7 +24,7 @@ static fwapp_hid_report_cb m_send_report_cb = NULL;
 
 // This HID report descriptor declares three usages:
 // - feature report, in 32 bytes
-static const uint8_t m_usb_hid_report_dsc[] = {
+static const uint8_t m_hid_report_dsc[] = {
     0x06, 0x00, 0xff,              // USAGE_PAGE (Vendor Defined Page 1)
     0x09, 0x01,                    // USAGE (Vendor Usage 1)
     0xa1, 0x01,                    // COLLECTION (Application)
@@ -43,9 +43,9 @@ static const struct {
         uint8_t bReportDescriptorType;
         uint16_t wDescriptorLength;
     } __attribute__((packed)) hid_report;
-} __attribute__((packed)) m_usb_hid_function = {
+} __attribute__((packed)) m_hid_function = {
     .hid_descriptor = {
-        .bLength = sizeof(m_usb_hid_function),
+        .bLength = sizeof(m_hid_function),
         .bDescriptorType = USB_DT_HID,
         .bcdHID = USB_BCD_HID,
         .bCountryCode = 0,
@@ -53,11 +53,11 @@ static const struct {
         },
     .hid_report = {
         .bReportDescriptorType = USB_DT_REPORT,
-        .wDescriptorLength = sizeof(m_usb_hid_report_dsc),
+        .wDescriptorLength = sizeof(m_hid_report_dsc),
         }
 };
 
-static const struct usb_endpoint_descriptor m_usb_hid_endpoints[USB_HID_EP_COUNT] = {
+static const struct usb_endpoint_descriptor m_hid_endpoints[USB_HID_EP_COUNT] = {
     {
         .bLength = USB_DT_ENDPOINT_SIZE,
         .bDescriptorType = USB_DT_ENDPOINT,
@@ -87,9 +87,9 @@ const struct usb_interface_descriptor g_hid_iface_dsc = {
     .bInterfaceProtocol = USB_HID_INTERFACE_PROTOCOL_NONE,
     .iInterface = USB_HID_STRING_IDX,
 
-    .endpoint = m_usb_hid_endpoints,
-    .extra = &m_usb_hid_function,
-    .extralen = sizeof(m_usb_hid_function)
+    .endpoint = m_hid_endpoints,
+    .extra = &m_hid_function,
+    .extralen = sizeof(m_hid_function)
 };
 
 static enum usbd_request_return_codes fwapp_hid_control_request_cb(
@@ -114,8 +114,8 @@ static enum usbd_request_return_codes fwapp_hid_control_request_cb(
         return USBD_REQ_NOTSUPP; // Only accept the HID report descriptor request.
 
     // Send the HID report descriptor.
-    *buf = (uint8_t *)m_usb_hid_report_dsc;
-    *len = sizeof(m_usb_hid_report_dsc);
+    *buf = (uint8_t *)m_hid_report_dsc;
+    *len = sizeof(m_hid_report_dsc);
     return USBD_REQ_HANDLED;
 }
 
