@@ -14,9 +14,9 @@ static const struct usb_device_descriptor m_dev_dsc = {
     .bLength = USB_DT_DEVICE_SIZE,
     .bDescriptorType = USB_DT_DEVICE,
     .bcdUSB = USB_BCD_2,
-    .bDeviceClass = 0, // USB_CLASS_MISC,
-    .bDeviceSubClass = 0, // USB_SUBCLASS_COMMON,
-    .bDeviceProtocol = 0, // USB_PROTOCOL_IAD,
+    .bDeviceClass = USB_CLASS_MISC,
+    .bDeviceSubClass = USB_SUBCLASS_COMMON,
+    .bDeviceProtocol =  USB_PROTOCOL_IAD,
     .bMaxPacketSize0 = USB_MAX_EP0_SIZE,
     .idVendor = USB_VENDOR_ID,
     .idProduct = USB_PRODUCT_ID,
@@ -34,7 +34,12 @@ static const struct usb_interface m_ifaces[USB_INTERFACES_NUMBER] = {
     },
     {
         .num_altsetting = 1,
-        .altsetting = &g_uac_iface_dsc
+        .iface_assoc = &g_uac_iface_assoc_dsc,
+        .altsetting = &g_uac_iface_control_dsc
+    },
+    {
+        .num_altsetting = 1, //2,
+        .altsetting = &g_uac_iface_stream_dsc
     }
 };
 
@@ -55,7 +60,9 @@ static const char *m_strings[USB_STRINGS_NUMBER] = {
     "SI4730 AM/FM Radio Receiver", // Product string.
     "12345678", // Serial number string.
     "SI4730 AM/FM Radio Receiver Configuration", // Configuration string.
-    "SI4730 AM/FM Radio Receiver Control", // Control string.
+    "SI4730 AM/FM Radio Receiver HID Control", // Control string.
+    "SI4730 AM/FM Radio Receiver Audio Assoc", // Audio association string.
+    "SI4730 AM/FM Radio Receiver Audio Control", // Audio control string.
     "SI4730 AM/FM Radio Receiver Audio Stream", // Audio stream string.
 };
 
@@ -77,12 +84,47 @@ static void fwapp_usb_reenumerate(void)
     }
 }
 
+static enum usbd_request_return_codes fwapp_usb_control_request_cb(
+    usbd_device *dev,
+    struct usb_setup_data *req,
+    uint8_t **buf,
+    uint16_t *len,
+    void (**complete)(usbd_device *usbd_dev, struct usb_setup_data *req))
+{
+    (void)buf;
+    (void)complete;
+    (void)len;
+    (void)dev;
+
+    if (req->wIndex == INTERFACE_RAW_HID) {
+        return raw_hid_control_request_handler(dev, req, buf, len, complete);
+    }
+
+//    if (req->wIndex == INTERFACE_CDC_COMM) {
+//        return cdcacm_control_request_handler(dev, req, buf, len, complete);
+//    }
+
+//    if (req->wIndex == INTERFACE_KEYBOARD_HID) {
+//        return keyboard_hid_control_request_handler(
+//            dev, req, buf, len, complete);
+//    }
+
+    // This handler didn't handle this command, try the next one.
+    return USBD_REQ_NEXT_CALLBACK;
+}
+
 static void fwapp_usb_set_config_cb(usbd_device *dev, uint16_t wValue)
 {
     (void)wValue;
 
     fwapp_hid_setup(dev);
     fwapp_uac_setup(dev);
+
+    usbd_register_control_callback(
+        dev,
+        USB_REQ_TYPE_INTERFACE, // Mask
+        USB_REQ_TYPE_RECIPIENT, // Value
+        fwapp_usb_control_request_cb);
 }
 
 static void fwapp_usb_setup(void)

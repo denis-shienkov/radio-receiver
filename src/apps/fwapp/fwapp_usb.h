@@ -21,20 +21,25 @@
 // USB maximum configurations number.
 #define USB_MAX_NUM_CONFIGURATION   1
 // USB number of strings.
-#define USB_STRINGS_NUMBER          6
+#define USB_STRINGS_NUMBER          8
 #define USB_MANUFACTURER_STRING_IDX 1
 #define USB_PRODUCT_STRING_IDX      2
 #define USB_SERIALNUM_STRING_IDX    3
 #define USB_CONFIG_STRING_IDX       4
 #define USB_HID_STRING_IDX          5
-#define USB_UAC_STRING_IDX          6
+#define USB_UAC_ASSOC_STRING_IDX    6
+#define USB_UAC_CONTROL_STRING_IDX  7
+#define USB_UAC_STREAM_STRING_IDX   8
 
 // Device configuration descriptor defines.
 
 // USB number of all interfaces (HID + UAC1).
-#define USB_INTERFACES_NUMBER       2
-#define USB_HID_INTERFACE_IDX       0
-#define USB_UAC_INTERFACE_IDX       1
+#define USB_INTERFACES_NUMBER               3
+#define USB_UAC_INTERFACES_NUMBER           2
+#define USB_HID_INTERFACE_IDX               0
+#define USB_UAC_CONTROL_INTERFACE_IDX       1
+#define USB_UAC_STREAMIMG_INTERFACE_IDX     2
+
 
 // USB configuration value.
 #define USB_CONFIGURATION_VALUE     1

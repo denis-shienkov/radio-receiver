@@ -157,11 +157,11 @@ void fwapp_hid_setup(usbd_device *dev)
                   USB_HID_EP_LENGTH,
                   fwapp_hid_data_recv_cb);
 
-    usbd_register_control_callback(
-        m_dev,
-        USB_REQ_TYPE_STANDARD | USB_REQ_TYPE_INTERFACE,
-        USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
-        fwapp_hid_control_request_cb);
+//    usbd_register_control_callback(
+//        m_dev,
+//        USB_REQ_TYPE_STANDARD | USB_REQ_TYPE_INTERFACE,
+//        USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
+//        fwapp_hid_control_request_cb);
 }
 
 uint16_t fwapp_hid_recv_report(uint8_t *report, uint16_t length)
