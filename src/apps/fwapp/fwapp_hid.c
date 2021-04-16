@@ -13,13 +13,17 @@
 #define USB_HID_EP_OUT_ADDRESS      0x01
 // USB HID endpoint buffer size.
 #define USB_HID_EP_LENGTH           64
-// USB HID endpoint polling interval (16 ms).
+// USB HID endpoint polling interval.
 #define USB_HID_EP_POLL_INTERVAL    0x20
+// USB HID report data size.
+#define UDB_HID_REPORT_DATA_SIZE    32
+
+static usbd_device *m_dev = NULL;
+static fwapp_hid_report_cb m_recv_report_cb = NULL;
+static fwapp_hid_report_cb m_send_report_cb = NULL;
 
 // This HID report descriptor declares three usages:
-// - input report, in 1024 bytes
-// - output report, in 1024 bytes
-// - feature report, in 64 bytes
+// - feature report, in 32 bytes
 static const uint8_t m_usb_hid_report_dsc[] = {
     0x06, 0x00, 0xff,              // USAGE_PAGE (Vendor Defined Page 1)
     0x09, 0x01,                    // USAGE (Vendor Usage 1)
@@ -27,13 +31,7 @@ static const uint8_t m_usb_hid_report_dsc[] = {
     0x15, 0x00,                    //   LOGICAL_MINIMUM (0)
     0x26, 0xff, 0x00,              //   LOGICAL_MAXIMUM (255)
     0x75, 0x08,                    //   REPORT_SIZE (8)
-    0x96, 0x00, 0x04,              //   REPORT_COUNT (1024)
-    0x09, 0x01,                    //   USAGE (Vendor Usage 1)
-    0x81, 0x02,                    //   INPUT (Data,Var,Abs)
-    0x96, 0x00, 0x04,              //   REPORT_COUNT (1024)
-    0x09, 0x01,                    //   USAGE (Vendor Usage 1)
-    0x91, 0x02,                    //   OUTPUT (Data,Var,Abs)
-    0x95, 0x40,                    //   REPORT_COUNT (64)
+    0x95, 0x40,                    //   REPORT_COUNT (32)
     0x09, 0x01,                    //   USAGE (Vendor Usage 1)
     0xb1, 0x02,                    //   FEATURE (Data,Var,Abs)
     0xc0                           // END_COLLECTION
@@ -95,7 +93,7 @@ const struct usb_interface_descriptor g_hid_iface_dsc = {
 };
 
 static enum usbd_request_return_codes fwapp_hid_control_request_cb(
-    usbd_device *usbd_dev,
+    usbd_device *dev,
     struct usb_setup_data *req,
     uint8_t **buf,
     uint16_t *len,
@@ -104,7 +102,7 @@ static enum usbd_request_return_codes fwapp_hid_control_request_cb(
     (void)buf;
     (void)complete;
     (void)len;
-    (void)usbd_dev;
+    (void)dev;
 
     enum { EXPECTED_BM_REQ_TYPE = USB_REQ_TYPE_IN | USB_REQ_TYPE_INTERFACE };
     if (req->bmRequestType != EXPECTED_BM_REQ_TYPE)
@@ -121,23 +119,79 @@ static enum usbd_request_return_codes fwapp_hid_control_request_cb(
     return USBD_REQ_HANDLED;
 }
 
-void fwapp_hid_ep_setup(usbd_device *usbd_dev)
+static void fwapp_hid_data_send_cb(usbd_device *dev, uint8_t ep)
 {
-    usbd_ep_setup(usbd_dev,
+    (void)dev;
+    (void)ep;
+
+    if (m_send_report_cb)
+        m_send_report_cb();
+}
+
+static void fwapp_hid_data_recv_cb(usbd_device *dev, uint8_t ep)
+{
+    (void)dev;
+    (void)ep;
+
+    if (m_recv_report_cb)
+        m_recv_report_cb();
+}
+
+void fwapp_hid_setup(usbd_device *dev)
+{
+    m_dev = dev;
+
+    usbd_ep_setup(m_dev,
                   USB_HID_EP_IN_ADDRESS,
                   USB_ENDPOINT_ATTR_INTERRUPT,
                   USB_HID_EP_LENGTH,
-                  NULL);
+                  fwapp_hid_data_send_cb);
 
-    usbd_ep_setup(usbd_dev,
+    usbd_ep_setup(m_dev,
                   USB_HID_EP_OUT_ADDRESS,
                   USB_ENDPOINT_ATTR_INTERRUPT,
                   USB_HID_EP_LENGTH,
-                  NULL);
+                  fwapp_hid_data_recv_cb);
 
     usbd_register_control_callback(
-        usbd_dev,
+        m_dev,
         USB_REQ_TYPE_STANDARD | USB_REQ_TYPE_INTERFACE,
         USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
         fwapp_hid_control_request_cb);
+}
+
+uint16_t fwapp_hid_recv_report(uint8_t *report, uint16_t length)
+{
+    if (length > UDB_HID_REPORT_DATA_SIZE)
+        length = UDB_HID_REPORT_DATA_SIZE;
+
+    return usbd_ep_read_packet(
+        m_dev,
+        USB_HID_EP_OUT_ADDRESS,
+        report,
+        length);
+}
+
+uint16_t fwapp_hid_send_report(const uint8_t *report, uint16_t length)
+{
+    if (length > UDB_HID_REPORT_DATA_SIZE)
+        length = UDB_HID_REPORT_DATA_SIZE;
+
+    return usbd_ep_write_packet(
+        m_dev,
+        USB_HID_EP_IN_ADDRESS,
+        report,
+        length);
+}
+
+void fwapp_hid_register_recv_report_callback(fwapp_hid_report_cb recv_report_cb)
+{
+    if (recv_report_cb)
+        m_recv_report_cb = recv_report_cb;
+}
+
+void fwapp_hid_register_send_report_callback(fwapp_hid_report_cb send_report_cb)
+{
+    if (send_report_cb)
+        m_send_report_cb = send_report_cb;
 }

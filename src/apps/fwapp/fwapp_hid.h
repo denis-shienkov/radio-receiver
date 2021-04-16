@@ -5,6 +5,12 @@
 
 extern const struct usb_interface_descriptor g_hid_iface_dsc;
 
-void fwapp_hid_ep_setup(usbd_device *usbd_dev);
+typedef void (*fwapp_hid_report_cb)(void);
+
+void fwapp_hid_setup(usbd_device *dev);
+uint16_t fwapp_hid_recv_report(uint8_t *report, uint16_t length);
+uint16_t fwapp_hid_send_report(const uint8_t *report, uint16_t length);
+void fwapp_hid_register_recv_report_callback(fwapp_hid_report_cb rec_report_cb);
+void fwapp_hid_register_send_report_callback(fwapp_hid_report_cb send_report_cb);
 
 #endif // FWAPP_HID_H
