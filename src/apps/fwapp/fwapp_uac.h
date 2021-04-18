@@ -5,7 +5,8 @@
 
 extern const struct usb_iface_assoc_descriptor g_uac_iface_assoc_dsc;
 extern const struct usb_interface_descriptor g_uac_iface_control_dsc;
-extern const struct usb_interface_descriptor g_uac_iface_stream_dsc;
+extern const struct usb_interface_descriptor g_uac_iface_stream_dscs[];
+extern uint8_t g_uac_stream_iface_cur_altsetting;
 
 void fwapp_uac_setup(usbd_device *dev);
 

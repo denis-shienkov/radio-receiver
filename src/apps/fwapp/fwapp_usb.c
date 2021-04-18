@@ -38,8 +38,9 @@ static const struct usb_interface m_ifaces[USB_INTERFACES_NUMBER] = {
         .altsetting = &g_uac_iface_control_dsc
     },
     {
-        .num_altsetting = 1, //2,
-        .altsetting = &g_uac_iface_stream_dsc
+        .num_altsetting = 2,
+        .cur_altsetting = &g_uac_stream_iface_cur_altsetting,
+        .altsetting = g_uac_iface_stream_dscs
     }
 };
 
@@ -84,47 +85,12 @@ static void fwapp_usb_reenumerate(void)
     }
 }
 
-static enum usbd_request_return_codes fwapp_usb_control_request_cb(
-    usbd_device *dev,
-    struct usb_setup_data *req,
-    uint8_t **buf,
-    uint16_t *len,
-    void (**complete)(usbd_device *usbd_dev, struct usb_setup_data *req))
-{
-    (void)buf;
-    (void)complete;
-    (void)len;
-    (void)dev;
-
-    if (req->wIndex == INTERFACE_RAW_HID) {
-        return raw_hid_control_request_handler(dev, req, buf, len, complete);
-    }
-
-//    if (req->wIndex == INTERFACE_CDC_COMM) {
-//        return cdcacm_control_request_handler(dev, req, buf, len, complete);
-//    }
-
-//    if (req->wIndex == INTERFACE_KEYBOARD_HID) {
-//        return keyboard_hid_control_request_handler(
-//            dev, req, buf, len, complete);
-//    }
-
-    // This handler didn't handle this command, try the next one.
-    return USBD_REQ_NEXT_CALLBACK;
-}
-
 static void fwapp_usb_set_config_cb(usbd_device *dev, uint16_t wValue)
 {
     (void)wValue;
 
     fwapp_hid_setup(dev);
     fwapp_uac_setup(dev);
-
-    usbd_register_control_callback(
-        dev,
-        USB_REQ_TYPE_INTERFACE, // Mask
-        USB_REQ_TYPE_RECIPIENT, // Value
-        fwapp_usb_control_request_cb);
 }
 
 static void fwapp_usb_setup(void)
