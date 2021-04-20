@@ -5,19 +5,6 @@
 
 #include <stddef.h> // for NULL
 
-// USB HID BCD version.
-#define USB_BCD_HID                 0x0100 // 1.0
-// USB HID endpoint addresses.
-#define USB_HID_EP_COUNT            2
-#define USB_HID_EP_IN_ADDRESS       0x81
-#define USB_HID_EP_OUT_ADDRESS      0x01
-// USB HID endpoint buffer size.
-#define USB_HID_EP_LENGTH           64
-// USB HID endpoint polling interval.
-#define USB_HID_EP_POLL_INTERVAL    0x20
-// USB HID report data size.
-#define UDB_HID_REPORT_DATA_SIZE    32
-
 static usbd_device *m_dev = NULL;
 static fwapp_hid_report_cb m_recv_report_cb = NULL;
 static fwapp_hid_report_cb m_send_report_cb = NULL;
@@ -43,11 +30,11 @@ struct usb_hid_report {
 } __attribute__((packed));
 
 static const struct {
-    struct usb_hid_descriptor hid_dsc;
-    struct usb_hid_report hid_rep;
+    struct usb_hid_descriptor definition;
+    struct usb_hid_report report;
 } __attribute__((packed)) m_hid_function = {
 
-    .hid_dsc = {
+    .definition = {
         .bLength = sizeof(m_hid_function),
         .bDescriptorType = USB_DT_HID,
         .bcdHID = USB_BCD_HID,
@@ -55,7 +42,7 @@ static const struct {
         .bNumDescriptors = 1,
         },
 
-    .hid_rep = {
+    .report = {
         .bReportDescriptorType = USB_DT_REPORT,
         .wDescriptorLength = sizeof(m_hid_report_dsc),
         }
@@ -103,24 +90,21 @@ static enum usbd_request_return_codes fwapp_hid_control_request_cb(
     uint16_t *len,
     void (**complete)(usbd_device *usbd_dev, struct usb_setup_data *req))
 {
-    (void)buf;
     (void)complete;
-    (void)len;
     (void)dev;
 
     enum { EXPECTED_BM_REQ_TYPE = USB_REQ_TYPE_IN | USB_REQ_TYPE_INTERFACE };
-    if (req->bmRequestType != EXPECTED_BM_REQ_TYPE)
-        return USBD_REQ_NOTSUPP; // Only accept the interface input request.
-    if (req->bRequest != USB_REQ_GET_DESCRIPTOR)
-        return USBD_REQ_NOTSUPP; // Only accept the get descriptor request.
-    enum { EXPECTED_VALUE = (USB_HID_DT_REPORT << 8) };
-    if (req->wValue != EXPECTED_VALUE)
-        return USBD_REQ_NOTSUPP; // Only accept the HID report descriptor request.
+    if (req->bmRequestType == EXPECTED_BM_REQ_TYPE
+        && req->bRequest == USB_REQ_GET_DESCRIPTOR) {
+        enum { EXPECTED_VALUE = (USB_HID_DT_REPORT << 8) };
+        if (req->wValue == EXPECTED_VALUE) {
+            *buf = (uint8_t *)m_hid_report_dsc;
+            *len = sizeof(m_hid_report_dsc);
+            return USBD_REQ_HANDLED;
+        }
+    }
 
-    // Send the HID report descriptor.
-    *buf = (uint8_t *)m_hid_report_dsc;
-    *len = sizeof(m_hid_report_dsc);
-    return USBD_REQ_HANDLED;
+    return USBD_REQ_NEXT_CALLBACK;
 }
 
 static void fwapp_hid_data_send_cb(usbd_device *dev, uint8_t ep)
@@ -159,7 +143,7 @@ void fwapp_hid_setup(usbd_device *dev)
 
     usbd_register_control_callback(
         m_dev,
-        USB_REQ_TYPE_INTERFACE,
+        USB_REQ_TYPE_STANDARD | USB_REQ_TYPE_INTERFACE,
         USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
         fwapp_hid_control_request_cb);
 }

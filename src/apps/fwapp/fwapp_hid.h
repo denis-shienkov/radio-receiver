@@ -3,6 +3,21 @@
 
 #include <libopencm3/usb/usbd.h>
 
+// USB HID configuration.
+
+// USB HID BCD version.
+#define USB_BCD_HID                     0x0100 // 1.0
+// USB HID endpoint addresses.
+#define USB_HID_EP_COUNT                2
+#define USB_HID_EP_IN_ADDRESS           0x81
+#define USB_HID_EP_OUT_ADDRESS          0x01
+// USB HID endpoint buffer size.
+#define USB_HID_EP_LENGTH               64
+// USB HID endpoint polling interval.
+#define USB_HID_EP_POLL_INTERVAL        0x20
+// USB HID report data size.
+#define UDB_HID_REPORT_DATA_SIZE        32
+
 extern const struct usb_interface_descriptor g_hid_iface_dsc;
 
 typedef void (*fwapp_hid_report_cb)(void);
