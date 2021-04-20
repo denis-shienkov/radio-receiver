@@ -16,7 +16,7 @@ static const struct usb_device_descriptor m_dev_dsc = {
     .bcdUSB = USB_BCD_2,
     .bDeviceClass = USB_CLASS_MISC,
     .bDeviceSubClass = USB_SUBCLASS_COMMON,
-    .bDeviceProtocol =  USB_PROTOCOL_IAD,
+    .bDeviceProtocol = USB_PROTOCOL_IAD,
     .bMaxPacketSize0 = USB_MAX_EP0_SIZE,
     .idVendor = USB_VENDOR_ID,
     .idProduct = USB_PRODUCT_ID,
@@ -24,7 +24,7 @@ static const struct usb_device_descriptor m_dev_dsc = {
     .iManufacturer = USB_MANUFACTURER_STRING_IDX,
     .iProduct = USB_PRODUCT_STRING_IDX,
     .iSerialNumber = USB_SERIALNUM_STRING_IDX,
-    .bNumConfigurations = USB_MAX_NUM_CONFIGURATION
+    .bNumConfigurations = USB_CONFIGURATIONS_NUMBER
 };
 
 static const struct usb_interface m_ifaces[USB_INTERFACES_NUMBER] = {
@@ -53,6 +53,7 @@ static const struct usb_config_descriptor m_config_dsc = {
     .iConfiguration = USB_CONFIG_STRING_IDX,
     .bmAttributes = USB_CONFIG_ATTR_DEFAULT,
     .bMaxPower = USB_MAX_POWER,
+
     .interface = m_ifaces
 };
 
