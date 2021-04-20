@@ -43,12 +43,8 @@
 // the largest of which will be the configuration descriptor.
 #define USB_CONTROL_BUFFER_LENGTH       512
 
-#define USB_WINDEX_H(wIndex)        (wIndex >> 8)
-#define USB_WINDEX_L(wIndex)        (wIndex & 0xFF)
-#define USB_WLENGTH_H(wLength)      (wLength >> 8)
-#define USB_WLENGTH_L(wLength)      (wLength & 0xFF)
-#define USB_WVALUE_H(wValue)        (wValue >> 8)
-#define USB_WVALUE_L(wValue)        (wValue & 0xFF)
+#define get_byte_hi(word)        (word >> 8)
+#define get_byte_lo(word)        (word & 0xFF)
 
 void fwapp_usb_start(void);
 void fwapp_usb_stop(void);

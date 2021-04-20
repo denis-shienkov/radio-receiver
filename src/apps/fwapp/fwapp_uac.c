@@ -229,7 +229,7 @@ static enum usbd_request_return_codes fwapp_uac_handle_mute_selector(
     (void)complete;
     (void)dev;
 
-    const uint8_t channel_index = USB_WVALUE_L(req->wValue);
+    const uint8_t channel_index = get_byte_lo(req->wValue);
     if ((channel_index == USB_AUDIO_MASTER_CHANNEL_IDX)
         && (req->wLength == MUTED_LENGTH)) {
         // Check for request type, get/set the mute for requested channel.
@@ -257,7 +257,7 @@ static enum usbd_request_return_codes fwapp_uac_handle_feature_unit_request(
     void (**complete)(usbd_device *usbd_dev, struct usb_setup_data *req))
 {
     // Check for feature unit control selector.
-    const uint8_t control = USB_WVALUE_H(req->wValue);
+    const uint8_t control = get_byte_hi(req->wValue);
     switch (control) {
     case MUTE_CONTROL:
         return fwapp_uac_handle_mute_selector(dev, req, buf, len, complete);
@@ -278,7 +278,7 @@ static enum usbd_request_return_codes fwapp_uac_control_interface_request_cb(
     enum { EXPECTED_BM_REQ_TYPE = USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE };
     if ((req->bmRequestType & EXPECTED_BM_REQ_TYPE) == 0)
         return USBD_REQ_NOTSUPP;
-    const uint8_t iface_num = USB_WINDEX_H(req->wIndex);
+    const uint8_t iface_num = get_byte_hi(req->wIndex);
     // Check for Units ID's.
     switch (iface_num) {
     case USB_AUDIO_FEATURE_UNITL_ID:
