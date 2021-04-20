@@ -96,8 +96,9 @@ static enum usbd_request_return_codes fwapp_hid_control_request_cb(
     enum { EXPECTED_BM_REQ_TYPE = USB_REQ_TYPE_IN | USB_REQ_TYPE_INTERFACE };
     if (req->bmRequestType == EXPECTED_BM_REQ_TYPE
         && req->bRequest == USB_REQ_GET_DESCRIPTOR) {
-        enum { EXPECTED_VALUE = (USB_HID_DT_REPORT << 8) };
-        if (req->wValue == EXPECTED_VALUE) {
+        const uint8_t report_code = get_byte_hi(req->wValue);
+        const  uint8_t zero_code = get_byte_lo(req->wValue);
+        if (report_code == USB_HID_DT_REPORT && zero_code == 0) {
             *buf = (uint8_t *)m_hid_report_dsc;
             *len = sizeof(m_hid_report_dsc);
             return USBD_REQ_HANDLED;

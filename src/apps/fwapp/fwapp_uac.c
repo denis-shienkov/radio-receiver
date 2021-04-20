@@ -5,6 +5,18 @@
 
 #include <stddef.h> // for NULL
 
+uint8_t g_uac_stream_iface_cur_altsetting = 0;
+
+// Array of channels configuration, include the master channel.
+// Note: Should contains swapped ushort values!
+static struct usb_audio_ch_cfg {
+    uint8_t mute; // =1 - muted.
+} m_channels_cfg[USB_AUDIO_CHANNELS_NUMBER + 1] = {
+    {SET_MUTED}, // Master channel.
+    {SET_MUTED}, // Left channel.
+    {SET_MUTED}  // Right channel.
+};
+
 // Association interface configuration.
 
 const struct usb_iface_assoc_descriptor g_uac_iface_assoc_dsc = {
@@ -114,8 +126,6 @@ const struct usb_interface_descriptor g_uac_iface_control_dsc = {
 
 // Streaming interface configuration.
 
-uint8_t g_uac_stream_iface_cur_altsetting = 0;
-
 static const struct usb_audio_stream_audio_endpoint_descriptor m_uac_cs_ep_dscs[] = {
     {
         .bLength = sizeof(struct usb_audio_stream_audio_endpoint_descriptor),
@@ -209,16 +219,6 @@ const struct usb_interface_descriptor g_uac_iface_stream_dscs[] = {
     }
 };
 
-// Array of channels configuration, include the master channel.
-// Note: Should contains swapped ushort values!
-static struct usb_audio_ch_cfg {
-    uint8_t mute; // =1 - mute
-} m_channels_cfg[USB_AUDIO_CHANNELS_NUMBER + 1] = {
-    {SET_MUTED}, // Master channel.
-    {SET_MUTED}, // Left channel.
-    {SET_MUTED}  // Right channel.
-};
-
 static enum usbd_request_return_codes fwapp_uac_handle_mute_selector(
     usbd_device *dev,
     struct usb_setup_data *req,
@@ -279,7 +279,7 @@ static enum usbd_request_return_codes fwapp_uac_control_interface_request_cb(
     if ((req->bmRequestType & EXPECTED_BM_REQ_TYPE) == 0)
         return USBD_REQ_NOTSUPP;
     const uint8_t iface_num = get_byte_hi(req->wIndex);
-    // Check for Units ID's.
+    // Check for units ID's.
     switch (iface_num) {
     case USB_AUDIO_FEATURE_UNITL_ID:
         return fwapp_uac_handle_feature_unit_request(dev, req, buf, len, complete);
