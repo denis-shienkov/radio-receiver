@@ -5,30 +5,6 @@
 
 #include <stddef.h> // for NULL
 
-// USB ADC BCD version.
-#define USB_BCD_ADC                         0x0100 // 1.0
-// USB audio endpoint addresses.
-#define USB_AUDIO_EP_COUNT                  1
-#define USB_AUDIO_EP_IN_ADDRESS             0x82
-// USB audio endpoint buffer size.
-#define USB_AUDIO_EP_LENGTH                 256
-// USB audio endpoint polling interval.
-#define USB_AUDIO_EP_POLL_INTERVAL          0x01
-// USB audio interface protocol.
-#define USB_AUDIO_INTERFACE_PROTOCOL_NONE   0
-// USB audio terminal identifiers.
-#define USB_AUDIO_INPUT_TERMINAL_ID         1
-#define USB_AUDIO_OUTPUT_TERMINAL_ID        2
-#define USB_AUDIO_FEATURE_UNITL_ID          3
-
-#define USB_AUDIO_SAMPLE_RATE               8000
-
-// USB terminal types.
-#define TERMINAL_STREAMING                  0x0101 // Streaming.
-
-// USB embedded function terminal types.
-#define RADIO_RECEIVER                      0x0710 // I, AM/FM radio.
-
 // Association interface configuration.
 
 const struct usb_iface_assoc_descriptor g_uac_iface_assoc_dsc = {
@@ -38,37 +14,39 @@ const struct usb_iface_assoc_descriptor g_uac_iface_assoc_dsc = {
     .bInterfaceCount = USB_UAC_INTERFACES_NUMBER,
     .bFunctionClass = USB_CLASS_AUDIO,
     .bFunctionSubClass = USB_AUDIO_SUBCLASS_AUDIOSTREAMING,
-    .bFunctionProtocol = USB_AUDIO_INTERFACE_PROTOCOL_NONE,
+    .bFunctionProtocol = USB_AUDIO_PROTOCOL_NONE,
     .iFunction = USB_UAC_ASSOC_STRING_IDX
 };
 
 // Control interface configuration.
 
+struct usb_audio_header_cs_descriptor {
+    struct usb_audio_header_descriptor_head head;
+    struct usb_audio_header_descriptor_body body;
+} __attribute__((packed));
+
 static const struct {
-    struct usb_audio_header_descriptor_head header_head_dsc;
-    struct usb_audio_header_descriptor_body header_body_dsc;
+    struct usb_audio_header_cs_descriptor header_cs_dsc;
     struct usb_audio_input_terminal_descriptor input_terminal_dsc;
-    struct usb_audio_output_terminal_descriptor output_terminal_dsc;
     struct usb_audio_feature_unit_descriptor_2ch feature_unit_dsc;
+    struct usb_audio_output_terminal_descriptor output_terminal_dsc;
 } __attribute__((packed)) m_uac_control_function = {
 
-    .header_head_dsc = {
-        .bLength = sizeof(struct usb_audio_header_descriptor_head)
-                   + 1 * sizeof(struct usb_audio_header_descriptor_body),
-        .bDescriptorType = USB_AUDIO_DT_CS_INTERFACE,
-        .bDescriptorSubtype = USB_AUDIO_TYPE_HEADER,
-        .bcdADC = USB_BCD_ADC,
-        .wTotalLength =
-            sizeof(struct usb_audio_header_descriptor_head)
-            + 1 * sizeof(struct usb_audio_header_descriptor_body)
-            + sizeof(struct usb_audio_input_terminal_descriptor)
-            + sizeof(struct usb_audio_feature_unit_descriptor_2ch)
-            + sizeof(struct usb_audio_output_terminal_descriptor),
-        .binCollection = 1
-    },
-
-    .header_body_dsc = {
-        .baInterfaceNr = 0x01
+    .header_cs_dsc = {
+        .head = {
+            .bLength = sizeof(struct usb_audio_header_cs_descriptor),
+            .bDescriptorType = USB_AUDIO_DT_CS_INTERFACE,
+            .bDescriptorSubtype = USB_AUDIO_TYPE_HEADER,
+            .bcdADC = USB_BCD_ADC,
+            .wTotalLength = sizeof(struct usb_audio_header_cs_descriptor)
+                            + sizeof(struct usb_audio_input_terminal_descriptor)
+                            + sizeof(struct usb_audio_feature_unit_descriptor_2ch)
+                            + sizeof(struct usb_audio_output_terminal_descriptor),
+            .binCollection = USB_UAC_STREAM_INTERFACES_NUMBER
+        },
+        .body = {
+            .baInterfaceNr = USB_UAC_STREAM_INTERFACE_IDX
+        }
     },
 
     .input_terminal_dsc = {
@@ -77,21 +55,10 @@ static const struct {
         .bDescriptorSubtype = USB_AUDIO_TYPE_INPUT_TERMINAL,
         .bTerminalID = USB_AUDIO_INPUT_TERMINAL_ID,
         .wTerminalType = RADIO_RECEIVER,
-        .bAssocTerminal = 0,
+        .bAssocTerminal = USB_AUDIO_NONE_TERMINAL_ID,
         .bNrChannels = 2,
-        .wChannelConfig = 0x0003, // Left & Right channels.
+        .wChannelConfig = (bmLEFT_FRONT | bmRIGHT_FRONT),
         .iChannelNames = 0,
-        .iTerminal = 0
-    },
-
-    .output_terminal_dsc = {
-        .bLength = sizeof(struct usb_audio_output_terminal_descriptor),
-        .bDescriptorType = USB_AUDIO_DT_CS_INTERFACE,
-        .bDescriptorSubtype = USB_AUDIO_TYPE_OUTPUT_TERMINAL,
-        .bTerminalID = USB_AUDIO_OUTPUT_TERMINAL_ID,
-        .wTerminalType = TERMINAL_STREAMING,
-        .bAssocTerminal = 0,
-        .bSourceID = USB_AUDIO_FEATURE_UNITL_ID,
         .iTerminal = 0
     },
 
@@ -103,7 +70,7 @@ static const struct {
             .bUnitID = USB_AUDIO_FEATURE_UNITL_ID,
             .bSourceID = USB_AUDIO_INPUT_TERMINAL_ID,
             .bControlSize = 2,
-            .bmaControlMaster = 0x0001// 'Mute' is supported.
+            .bmaControlMaster = bmMUTE
         },
         .channel_control = {
             {
@@ -116,6 +83,17 @@ static const struct {
         .tail = {
             .iFeature = 0x00
         }
+    },
+
+    .output_terminal_dsc = {
+        .bLength = sizeof(struct usb_audio_output_terminal_descriptor),
+        .bDescriptorType = USB_AUDIO_DT_CS_INTERFACE,
+        .bDescriptorSubtype = USB_AUDIO_TYPE_OUTPUT_TERMINAL,
+        .bTerminalID = USB_AUDIO_OUTPUT_TERMINAL_ID,
+        .wTerminalType = TERMINAL_STREAMING,
+        .bAssocTerminal = USB_AUDIO_NONE_TERMINAL_ID,
+        .bSourceID = USB_AUDIO_FEATURE_UNITL_ID,
+        .iTerminal = 0
     }
 };
 
@@ -127,7 +105,7 @@ const struct usb_interface_descriptor g_uac_iface_control_dsc = {
     .bNumEndpoints = 0,
     .bInterfaceClass = USB_CLASS_AUDIO,
     .bInterfaceSubClass = USB_AUDIO_SUBCLASS_CONTROL,
-    .bInterfaceProtocol = USB_AUDIO_INTERFACE_PROTOCOL_NONE,
+    .bInterfaceProtocol = USB_AUDIO_PROTOCOL_NONE,
     .iInterface = USB_UAC_CONTROL_STRING_IDX,
 
     .extra = &m_uac_control_function,
@@ -142,7 +120,7 @@ static const struct usb_audio_stream_audio_endpoint_descriptor m_uac_cs_ep_dscs[
     {
         .bLength = sizeof(struct usb_audio_stream_audio_endpoint_descriptor),
         .bDescriptorType = USB_AUDIO_DT_CS_ENDPOINT,
-        .bDescriptorSubtype = 1, // EP_GENERAL
+        .bDescriptorSubtype = AS_GENERAL,
         .bmAttributes = 0,
         .bLockDelayUnits = 0x02, // PCM samples.
         .wLockDelay = 0x0000
@@ -174,22 +152,22 @@ static const struct {
     .cs_stream_iface_dsc = {
         .bLength = sizeof(struct usb_audio_stream_interface_descriptor),
         .bDescriptorType = USB_AUDIO_DT_CS_INTERFACE,
-        .bDescriptorSubtype = 1, // AS_GENERAL
+        .bDescriptorSubtype = AS_GENERAL,
         .bTerminalLink = USB_AUDIO_OUTPUT_TERMINAL_ID,
         .bDelay = 0,
-        .wFormatTag = 0x0001 // PCM Format
+        .wFormatTag = PCM
     },
 
     .type1_format_dsc = {
         .head = {
             .bLength = sizeof(struct usb_audio_format_type1_descriptor_1freq),
             .bDescriptorType = USB_AUDIO_DT_CS_INTERFACE,
-            .bDescriptorSubtype = 2, // FORMAT_TYPE
-            .bFormatType = 1, // FORMAT_TYPE 1
-            .bNrChannels = 2,
-            .bSubFrameSize = 2,
-            .bBitResolution = 16, // Should be 10, but 16 is more reliable
-            .bSamFreqType = 1 // 1 discrete sampling frequency
+            .bDescriptorSubtype = FORMAT_TYPE,
+            .bFormatType = FORMAT_TYPE_I,
+            .bNrChannels = USB_AUDIO_CHANNELS_NUMBER,
+            .bSubFrameSize = USB_AUDIO_SUB_FRAME_SIZE,
+            .bBitResolution = USB_AUDIO_BIT_RESOLUTION,
+            .bSamFreqType = USB_AUDIO_DISCRETE_FREQS_NUMBER // 1 discrete sampling frequency
         },
         .freqs = {
             {
@@ -203,12 +181,12 @@ const struct usb_interface_descriptor g_uac_iface_stream_dscs[] = {
     {
         .bLength = USB_DT_INTERFACE_SIZE,
         .bDescriptorType = USB_DT_INTERFACE,
-        .bInterfaceNumber = USB_UAC_STREAMIMG_INTERFACE_IDX,
+        .bInterfaceNumber = USB_UAC_STREAM_INTERFACE_IDX,
         .bAlternateSetting = 0,
         .bNumEndpoints = 0,
         .bInterfaceClass = USB_CLASS_AUDIO,
         .bInterfaceSubClass = USB_AUDIO_SUBCLASS_AUDIOSTREAMING,
-        .bInterfaceProtocol = USB_AUDIO_INTERFACE_PROTOCOL_NONE,
+        .bInterfaceProtocol = USB_AUDIO_PROTOCOL_NONE,
         .iInterface = USB_UAC_STREAM_STRING_IDX,
 
         .extra = NULL,
@@ -217,12 +195,12 @@ const struct usb_interface_descriptor g_uac_iface_stream_dscs[] = {
     {
         .bLength = USB_DT_INTERFACE_SIZE,
         .bDescriptorType = USB_DT_INTERFACE,
-        .bInterfaceNumber = USB_UAC_STREAMIMG_INTERFACE_IDX,
+        .bInterfaceNumber = USB_UAC_STREAM_INTERFACE_IDX,
         .bAlternateSetting = 1,
-        .bNumEndpoints = 1,
+        .bNumEndpoints = USB_AUDIO_EP_COUNT,
         .bInterfaceClass = USB_CLASS_AUDIO,
         .bInterfaceSubClass = USB_AUDIO_SUBCLASS_AUDIOSTREAMING,
-        .bInterfaceProtocol = USB_AUDIO_INTERFACE_PROTOCOL_NONE,
+        .bInterfaceProtocol = USB_AUDIO_PROTOCOL_NONE,
         .iInterface = USB_UAC_STREAM_STRING_IDX,
 
         .endpoint = m_uac_stream_endpoints,
@@ -231,6 +209,103 @@ const struct usb_interface_descriptor g_uac_iface_stream_dscs[] = {
     }
 };
 
+// Array of channels configuration, include the master channel.
+// Note: Should contains swapped ushort values!
+static struct usb_audio_ch_cfg {
+    uint8_t mute; // =1 - mute
+} m_channels_cfg[USB_AUDIO_CHANNELS_NUMBER + 1] = {
+    {SET_MUTED}, // Master channel.
+    {SET_MUTED}, // Left channel.
+    {SET_MUTED}  // Right channel.
+};
+
+static enum usbd_request_return_codes fwapp_uac_handle_mute_selector(
+    usbd_device *dev,
+    struct usb_setup_data *req,
+    uint8_t **buf,
+    uint16_t *len,
+    void (**complete)(usbd_device *usbd_dev, struct usb_setup_data *req))
+{
+    (void)complete;
+    (void)dev;
+
+    const uint8_t channel_index = USB_WVALUE_L(req->wValue);
+    if ((channel_index == USB_AUDIO_MASTER_CHANNEL_IDX)
+        && (req->wLength == MUTED_LENGTH)) {
+        // Check for request type, get/set the mute for requested channel.
+        switch (req->bRequest) {
+        case GET_CUR:
+            *buf = &m_channels_cfg[channel_index].mute;
+            *len = 1;
+            return USBD_REQ_HANDLED;
+        case SET_CUR:
+            m_channels_cfg[channel_index].mute = *buf[0];
+            return USBD_REQ_HANDLED;
+        default:
+            break;
+        }
+    }
+
+    return USBD_REQ_NOTSUPP;
+}
+
+static enum usbd_request_return_codes fwapp_uac_handle_feature_unit_request(
+    usbd_device *dev,
+    struct usb_setup_data *req,
+    uint8_t **buf,
+    uint16_t *len,
+    void (**complete)(usbd_device *usbd_dev, struct usb_setup_data *req))
+{
+    // Check for feature unit control selector.
+    const uint8_t control = USB_WVALUE_H(req->wValue);
+    switch (control) {
+    case MUTE_CONTROL:
+        return fwapp_uac_handle_mute_selector(dev, req, buf, len, complete);
+    default:
+        break;
+    }
+
+    return USBD_REQ_NOTSUPP;
+}
+
+static enum usbd_request_return_codes fwapp_uac_control_interface_request_cb(
+    usbd_device *dev,
+    struct usb_setup_data *req,
+    uint8_t **buf,
+    uint16_t *len,
+    void (**complete)(usbd_device *usbd_dev, struct usb_setup_data *req))
+{
+    enum { EXPECTED_BM_REQ_TYPE = USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE };
+    if ((req->bmRequestType & EXPECTED_BM_REQ_TYPE) == 0)
+        return USBD_REQ_NOTSUPP;
+    const uint8_t iface_num = USB_WINDEX_H(req->wIndex);
+    // Check for Units ID's.
+    switch (iface_num) {
+    case USB_AUDIO_FEATURE_UNITL_ID:
+        return fwapp_uac_handle_feature_unit_request(dev, req, buf, len, complete);
+    default:
+        break;
+    }
+
+    return USBD_REQ_NOTSUPP;
+}
+
+static enum usbd_request_return_codes fwapp_uac_control_endpoint_request_cb(
+    usbd_device *dev,
+    struct usb_setup_data *req,
+    uint8_t **buf,
+    uint16_t *len,
+    void (**complete)(usbd_device *usbd_dev, struct usb_setup_data *req))
+{
+    (void)buf;
+    (void)complete;
+    (void)dev;
+    (void)len;
+    (void)req;
+
+    return USBD_REQ_NOTSUPP;
+}
+
 void fwapp_uac_setup(usbd_device *dev)
 {
     usbd_ep_setup(
@@ -238,5 +313,17 @@ void fwapp_uac_setup(usbd_device *dev)
         USB_AUDIO_EP_IN_ADDRESS,
         USB_ENDPOINT_ATTR_ISOCHRONOUS,
         32, // WAVEFORM_SAMPLES*2
-        NULL); // iso stream handler
+        NULL);
+
+    usbd_register_control_callback(
+        dev,
+        USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
+        USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
+        fwapp_uac_control_interface_request_cb);
+
+    usbd_register_control_callback(
+        dev,
+        USB_REQ_TYPE_CLASS | USB_REQ_TYPE_ENDPOINT,
+        USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
+        fwapp_uac_control_endpoint_request_cb);
 }
