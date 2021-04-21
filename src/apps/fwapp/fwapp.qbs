@@ -42,21 +42,26 @@ CppApplication {
             "-mfix-cortex-m3-ldrd",
             "-msoft-float",
             "-mthumb",
+            "-u_printf_float",
         ]
     }
 
     files: [
         "fwapp.c",
+        "fwapp_cbuf.c",
+        "fwapp_cbuf.h",
+        "fwapp_hid.c",
+        "fwapp_hid.h",
         "fwapp_led.c",
         "fwapp_led.h",
         "fwapp_systick.c",
         "fwapp_systick.h",
+        "fwapp_trace.c",
+        "fwapp_trace.h",
         "fwapp_uac.c",
         "fwapp_uac.h",
         "fwapp_usb.c",
         "fwapp_usb.h",
-        "fwapp_hid.c",
-        "fwapp_hid.h",
     ]
 
     Group {
