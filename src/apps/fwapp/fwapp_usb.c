@@ -3,9 +3,9 @@
 #include "fwapp_usb.h"
 
 #include <libopencm3/stm32/gpio.h>
-#include <libopencm3/usb/usbd.h>
 
 #include <stddef.h> // for NULL
+#include <stdio.h> // for printf
 
 static usbd_device *m_dev = NULL;
 static uint8_t m_control_buffer[USB_CONTROL_BUFFER_LENGTH] = {0};
@@ -124,4 +124,11 @@ void fwapp_usb_stop(void)
 void fwapp_usb_schedule(void)
 {
     usbd_poll(m_dev);
+}
+
+void fwapp_usb_dump_setup_req(struct usb_setup_data *req)
+{
+    printf(" - usb: %02x-%02x-%04x-%04x-%04x\n",
+           req->bmRequestType, req->bRequest,
+           req->wIndex, req->wLength, req->wValue);
 }

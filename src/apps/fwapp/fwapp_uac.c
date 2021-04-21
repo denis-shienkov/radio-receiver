@@ -4,14 +4,17 @@
 #include <libopencm3/usb/audio.h>
 
 #include <stddef.h> // for NULL
+#include <stdio.h> // for printf
+
+#define USB_AUDIO_ALL_CHANNELS_NUMBER   (USB_AUDIO_CHANNELS_NUMBER + 1)
 
 uint8_t g_uac_stream_iface_cur_altsetting = 0;
 
 // Array of channels configuration, include the master channel.
 // Note: Should contains swapped ushort values!
 static struct usb_audio_ch_cfg {
-    uint8_t mute; // =1 - muted.
-} m_channels_cfg[USB_AUDIO_CHANNELS_NUMBER + 1] = {
+    uint8_t muted; // =1 - muted.
+} m_channels_cfg[USB_AUDIO_ALL_CHANNELS_NUMBER + 1] = {
     {SET_MUTED}, // Master channel.
     {SET_MUTED}, // Left channel.
     {SET_MUTED}  // Right channel.
@@ -219,6 +222,22 @@ const struct usb_interface_descriptor g_uac_iface_stream_dscs[] = {
     }
 };
 
+static uint8_t fwapp_uac_get_channel_muted(uint8_t ch_index)
+{
+    uint8_t muted = SET_MUTED;
+    if (ch_index < USB_AUDIO_ALL_CHANNELS_NUMBER)
+        muted = m_channels_cfg[ch_index].muted;
+    printf("uac: get ch %u muted: %u\n", ch_index, muted);
+    return muted;
+}
+
+static void fwapp_uac_set_channel_muted(uint8_t ch_index, uint8_t muted)
+{
+    printf("uac: set ch %u muted: %u\n", ch_index, muted);
+    if (ch_index < USB_AUDIO_ALL_CHANNELS_NUMBER)
+        m_channels_cfg[ch_index].muted = muted;
+}
+
 static enum usbd_request_return_codes fwapp_uac_handle_mute_selector(
     usbd_device *dev,
     struct usb_setup_data *req,
@@ -229,23 +248,29 @@ static enum usbd_request_return_codes fwapp_uac_handle_mute_selector(
     (void)complete;
     (void)dev;
 
-    const uint8_t channel_index = get_byte_lo(req->wValue);
-    if ((channel_index == USB_AUDIO_MASTER_CHANNEL_IDX)
+    const uint8_t ch_index = get_byte_lo(req->wValue);
+    if ((ch_index == USB_AUDIO_MASTER_CHANNEL_IDX)
         && (req->wLength == MUTED_LENGTH)) {
         // Check for request type, get/set the mute for requested channel.
         switch (req->bRequest) {
-        case GET_CUR:
-            *buf = &m_channels_cfg[channel_index].mute;
-            *len = 1;
+        case GET_CUR: {
+            uint8_t muted = fwapp_uac_get_channel_muted(ch_index);
+            *buf = &muted;
+            *len = sizeof(muted);
             return USBD_REQ_HANDLED;
-        case SET_CUR:
-            m_channels_cfg[channel_index].mute = *buf[0];
+        }
+        case SET_CUR: {
+            const uint8_t muted = *buf[0];
+            fwapp_uac_set_channel_muted(ch_index, muted);
             return USBD_REQ_HANDLED;
+        }
         default:
             break;
         }
     }
 
+    printf("uac: unsupported setup:\n");
+    fwapp_usb_dump_setup_req(req);
     return USBD_REQ_NOTSUPP;
 }
 
