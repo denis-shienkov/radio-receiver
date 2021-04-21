@@ -50,6 +50,8 @@
 // USB audio class-specific subtypes.
 #define AS_GENERAL                      0x01
 #define FORMAT_TYPE                     0x02
+// USB audio class-specific endpoint descriptor subtypes.
+#define EP_GENERAL                      0x01
 // USB audio data format type-1 codes
 #define PCM                             0x0001
 // USB audio format type codes.
@@ -63,6 +65,8 @@
 // USB audio muted value.
 #define SET_MUTED                       1
 #define MUTED_LENGTH                    1
+// USB audio units.
+#define DECODED_PCM_SAMPLES             2
 
 extern const struct usb_iface_assoc_descriptor g_uac_iface_assoc_dsc;
 extern const struct usb_interface_descriptor g_uac_iface_control_dsc;

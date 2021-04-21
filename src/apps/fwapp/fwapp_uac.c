@@ -2,15 +2,49 @@
 #include "fwapp_usb.h"
 
 #include <libopencm3/usb/audio.h>
+#include <libopencm3/usb/dwc/otg_fs.h>
 
 #include <stddef.h> // for NULL
 
+#define WAVEFORM_SAMPLES 16
+// Samples interleaved L,R,L,R ==> actually samples/2 'time' samples.
+int16_t waveform_data[WAVEFORM_SAMPLES] = {0};
+
+static void init_waveform_data(void)
+{
+    // Just transmit a boring sawtooth waveform on both channels.
+    for (int i = 0; i != WAVEFORM_SAMPLES/2; ++i) {
+        waveform_data[i*2] = i*1024;
+        waveform_data[i*2+1] = i*1024;
+    }
+}
+
+/* HACK: upstream libopencm3 currently does not handle isochronous endpoints
+ * correctly. We must program the USB peripheral with an even/odd frame bit,
+ * toggling it so that we respond to every iso IN request from the host.
+ * If this toggling is not performed, we only get half the bandwidth. */
+#define USB_REBASE(x) MMIO32((x) + (USB_OTG_FS_BASE))
+#define USB_DIEPCTLX_SD1PID     (1 << 29) /* Odd frames */
+#define USB_DIEPCTLX_SD0PID     (1 << 28) /* Even frames */
+static void toggle_isochronous_frame(uint8_t ep)
+{
+    static int toggle = 0;
+    if (toggle++ % 2 == 0) {
+        USB_REBASE(OTG_DIEPCTL(ep)) |= USB_DIEPCTLX_SD0PID;
+    } else {
+        USB_REBASE(OTG_DIEPCTL(ep)) |= USB_DIEPCTLX_SD1PID;
+    }
+}
+
+
+
+static usbd_device *m_dev = NULL;
 uint8_t g_uac_stream_iface_cur_altsetting = 0;
 
 // Array of channels configuration, include the master channel.
 // Note: Should contains swapped ushort values!
 static struct usb_audio_ch_cfg {
-    uint8_t mute; // =1 - muted.
+    uint8_t muted; // =1 - muted.
 } m_channels_cfg[USB_AUDIO_CHANNELS_NUMBER + 1] = {
     {SET_MUTED}, // Master channel.
     {SET_MUTED}, // Left channel.
@@ -130,9 +164,9 @@ static const struct usb_audio_stream_audio_endpoint_descriptor m_uac_cs_ep_dscs[
     {
         .bLength = sizeof(struct usb_audio_stream_audio_endpoint_descriptor),
         .bDescriptorType = USB_AUDIO_DT_CS_ENDPOINT,
-        .bDescriptorSubtype = AS_GENERAL,
+        .bDescriptorSubtype = EP_GENERAL,
         .bmAttributes = 0,
-        .bLockDelayUnits = 0x02, // PCM samples.
+        .bLockDelayUnits = DECODED_PCM_SAMPLES,
         .wLockDelay = 0x0000
     }
 };
@@ -145,9 +179,6 @@ static const struct usb_endpoint_descriptor m_uac_stream_endpoints[USB_AUDIO_EP_
         .bmAttributes = USB_ENDPOINT_ATTR_ASYNC | USB_ENDPOINT_ATTR_ISOCHRONOUS,
         .wMaxPacketSize = USB_AUDIO_EP_LENGTH,
         .bInterval = USB_AUDIO_EP_POLL_INTERVAL,
-
-        // not using usb_audio_stream_endpoint_descriptor??
-        // (Why? These are USBv1.0 endpoint descriptors)
 
         .extra = m_uac_cs_ep_dscs,
         .extralen = sizeof(m_uac_cs_ep_dscs)
@@ -219,6 +250,11 @@ const struct usb_interface_descriptor g_uac_iface_stream_dscs[] = {
     }
 };
 
+static void fwapp_uac_set_muted(uint8_t channel_index, bool muted)
+{
+    m_channels_cfg[channel_index].muted = muted;
+}
+
 static enum usbd_request_return_codes fwapp_uac_handle_mute_selector(
     usbd_device *dev,
     struct usb_setup_data *req,
@@ -235,11 +271,13 @@ static enum usbd_request_return_codes fwapp_uac_handle_mute_selector(
         // Check for request type, get/set the mute for requested channel.
         switch (req->bRequest) {
         case GET_CUR:
-            *buf = &m_channels_cfg[channel_index].mute;
+            *buf = &m_channels_cfg[channel_index].muted;
             *len = 1;
             return USBD_REQ_HANDLED;
-        case SET_CUR:
-            m_channels_cfg[channel_index].mute = *buf[0];
+        case SET_CUR: {
+            const bool muted = *buf[0];
+            fwapp_uac_set_muted(channel_index, muted);
+        }
             return USBD_REQ_HANDLED;
         default:
             break;
@@ -306,14 +344,26 @@ static enum usbd_request_return_codes fwapp_uac_control_endpoint_request_cb(
     return USBD_REQ_NOTSUPP;
 }
 
+static void fwapp_uac_stream_cb(usbd_device *usbd_dev, uint8_t ep)
+{
+    (void)ep;
+
+    //gpio_clear(LED_GREEN_PORT, LED_GREEN_PIN);
+    toggle_isochronous_frame(ep);
+    usbd_ep_write_packet(usbd_dev, USB_AUDIO_EP_IN_ADDRESS, waveform_data, WAVEFORM_SAMPLES*2);
+}
+
 void fwapp_uac_setup(usbd_device *dev)
 {
+    m_dev = dev;
+    init_waveform_data();
+
     usbd_ep_setup(
         dev,
         USB_AUDIO_EP_IN_ADDRESS,
         USB_ENDPOINT_ATTR_ISOCHRONOUS,
-        32, // WAVEFORM_SAMPLES*2
-        NULL);
+        WAVEFORM_SAMPLES*2,
+        fwapp_uac_stream_cb);
 
     usbd_register_control_callback(
         dev,
