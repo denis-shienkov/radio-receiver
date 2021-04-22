@@ -96,7 +96,7 @@ static void fwapp_usb_set_config_cb(usbd_device *dev, uint16_t wValue)
 
 static void fwapp_usb_set_altsetting_cb(usbd_device *dev, uint16_t wIndex, uint16_t wValue)
 {
-    fwapp_uac_set_altsetting(dev, wIndex, wValue);
+    fwapp_uac_handle_set_altsetting(dev, wIndex, wValue);
 }
 
 static void fwapp_usb_setup(void)

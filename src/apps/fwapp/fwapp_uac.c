@@ -366,7 +366,7 @@ void fwapp_uac_setup(usbd_device *dev)
         fwapp_uac_control_endpoint_request_cb);
 }
 
-void fwapp_uac_set_altsetting(usbd_device *dev, uint16_t iface_idx, uint16_t alt_setting)
+void fwapp_uac_handle_set_altsetting(usbd_device *dev, uint16_t iface_idx, uint16_t alt_setting)
 {
     (void)dev;
 

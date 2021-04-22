@@ -73,6 +73,7 @@ extern const struct usb_interface_descriptor g_uac_iface_stream_dscs[];
 extern uint8_t g_uac_stream_iface_cur_altsetting;
 
 void fwapp_uac_setup(usbd_device *dev);
-void fwapp_uac_set_altsetting(usbd_device *dev, uint16_t iface_idx, uint16_t alt_setting);
+void fwapp_uac_handle_set_altsetting(usbd_device *dev, uint16_t iface_idx, uint16_t alt_setting);
+
 
 #endif // FWAPP_UAC_H
