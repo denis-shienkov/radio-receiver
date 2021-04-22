@@ -2,7 +2,6 @@
 #include "fwapp_systick.h"
 
 #include <libopencm3/stm32/gpio.h>
-#include <libopencm3/stm32/rcc.h>
 
 #define LED_PORT    GPIOC
 #define LED_PIN     GPIO13

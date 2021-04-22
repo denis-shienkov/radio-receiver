@@ -5,6 +5,15 @@
 #include <libopencm3/usb/dwc/otg_fs.h>
 
 #include <stddef.h> // for NULL
+#include <stdio.h> // for printf
+
+#define USB_AUDIO_ALL_CHANNELS_NUMBER   (USB_AUDIO_CHANNELS_NUMBER + 1)
+
+enum uac_stream_status {
+    UAC_STREAM_DISABLED = 0,
+    UAC_STREAM_IDLE,
+    UAC_STREAM_ENABLED
+};
 
 #define WAVEFORM_SAMPLES 16
 // Samples interleaved L,R,L,R ==> actually samples/2 'time' samples.
@@ -40,12 +49,13 @@ static void toggle_isochronous_frame(uint8_t ep)
 
 static usbd_device *m_dev = NULL;
 uint8_t g_uac_stream_iface_cur_altsetting = 0;
+static enum uac_stream_status m_uac_stream_status = UAC_STREAM_DISABLED;
 
 // Array of channels configuration, include the master channel.
 // Note: Should contains swapped ushort values!
 static struct usb_audio_ch_cfg {
     uint8_t muted; // =1 - muted.
-} m_channels_cfg[USB_AUDIO_CHANNELS_NUMBER + 1] = {
+} m_channels_cfg[USB_AUDIO_ALL_CHANNELS_NUMBER] = {
     {SET_MUTED}, // Master channel.
     {SET_MUTED}, // Left channel.
     {SET_MUTED}  // Right channel.
@@ -223,7 +233,7 @@ const struct usb_interface_descriptor g_uac_iface_stream_dscs[] = {
         .bLength = USB_DT_INTERFACE_SIZE,
         .bDescriptorType = USB_DT_INTERFACE,
         .bInterfaceNumber = USB_UAC_STREAM_INTERFACE_IDX,
-        .bAlternateSetting = 0,
+        .bAlternateSetting = USB_AUDIO_STREAM_ALT_SETTING_PASSIVE,
         .bNumEndpoints = 0,
         .bInterfaceClass = USB_CLASS_AUDIO,
         .bInterfaceSubClass = USB_AUDIO_SUBCLASS_AUDIOSTREAMING,
@@ -237,7 +247,7 @@ const struct usb_interface_descriptor g_uac_iface_stream_dscs[] = {
         .bLength = USB_DT_INTERFACE_SIZE,
         .bDescriptorType = USB_DT_INTERFACE,
         .bInterfaceNumber = USB_UAC_STREAM_INTERFACE_IDX,
-        .bAlternateSetting = 1,
+        .bAlternateSetting = USB_AUDIO_STREAM_ALT_SETTING_ACTIVE,
         .bNumEndpoints = USB_AUDIO_EP_COUNT,
         .bInterfaceClass = USB_CLASS_AUDIO,
         .bInterfaceSubClass = USB_AUDIO_SUBCLASS_AUDIOSTREAMING,
@@ -250,9 +260,26 @@ const struct usb_interface_descriptor g_uac_iface_stream_dscs[] = {
     }
 };
 
-static void fwapp_uac_set_muted(uint8_t channel_index, bool muted)
+static uint8_t fwapp_uac_get_channel_muted(uint8_t ch_index)
 {
-    m_channels_cfg[channel_index].muted = muted;
+    uint8_t muted = SET_MUTED;
+    if (ch_index < USB_AUDIO_ALL_CHANNELS_NUMBER)
+        muted = m_channels_cfg[ch_index].muted;
+    printf("uac: get ch %u muted: %u\n", ch_index, muted);
+    return muted;
+}
+
+static void fwapp_uac_set_channel_muted(uint8_t ch_index, uint8_t muted)
+{
+    printf("uac: set ch %u muted: %u\n", ch_index, muted);
+    if (ch_index < USB_AUDIO_ALL_CHANNELS_NUMBER)
+        m_channels_cfg[ch_index].muted = muted;
+}
+
+static void fwapp_uac_set_stream_status(enum uac_stream_status status)
+{
+    m_uac_stream_status = status;
+    printf("uac: set stream status %u\n", m_uac_stream_status);
 }
 
 static enum usbd_request_return_codes fwapp_uac_handle_mute_selector(
@@ -265,25 +292,29 @@ static enum usbd_request_return_codes fwapp_uac_handle_mute_selector(
     (void)complete;
     (void)dev;
 
-    const uint8_t channel_index = get_byte_lo(req->wValue);
-    if ((channel_index == USB_AUDIO_MASTER_CHANNEL_IDX)
+    const uint8_t ch_index = get_byte_lo(req->wValue);
+    if ((ch_index == USB_AUDIO_MASTER_CHANNEL_IDX)
         && (req->wLength == MUTED_LENGTH)) {
         // Check for request type, get/set the mute for requested channel.
         switch (req->bRequest) {
-        case GET_CUR:
-            *buf = &m_channels_cfg[channel_index].muted;
-            *len = 1;
+        case GET_CUR: {
+            uint8_t muted = fwapp_uac_get_channel_muted(ch_index);
+            *buf = &muted;
+            *len = sizeof(muted);
             return USBD_REQ_HANDLED;
-        case SET_CUR: {
-            const bool muted = *buf[0];
-            fwapp_uac_set_muted(channel_index, muted);
         }
+        case SET_CUR: {
+            const uint8_t muted = *buf[0];
+            fwapp_uac_set_channel_muted(ch_index, muted);
             return USBD_REQ_HANDLED;
+        }
         default:
             break;
         }
     }
 
+    printf("uac: unsupported setup:\n");
+    fwapp_usb_dump_setup_req(req);
     return USBD_REQ_NOTSUPP;
 }
 
@@ -303,6 +334,8 @@ static enum usbd_request_return_codes fwapp_uac_handle_feature_unit_request(
         break;
     }
 
+    printf("uac: unsupported setup:\n");
+    fwapp_usb_dump_setup_req(req);
     return USBD_REQ_NOTSUPP;
 }
 
@@ -325,6 +358,8 @@ static enum usbd_request_return_codes fwapp_uac_control_interface_request_cb(
         break;
     }
 
+    printf("uac: unsupported setup:\n");
+    fwapp_usb_dump_setup_req(req);
     return USBD_REQ_NOTSUPP;
 }
 
@@ -341,16 +376,18 @@ static enum usbd_request_return_codes fwapp_uac_control_endpoint_request_cb(
     (void)len;
     (void)req;
 
+    printf("uac: unsupported setup:\n");
+    fwapp_usb_dump_setup_req(req);
     return USBD_REQ_NOTSUPP;
 }
 
-static void fwapp_uac_stream_cb(usbd_device *usbd_dev, uint8_t ep)
+static void fwapp_uac_stream_cb(usbd_device *dev, uint8_t ep)
 {
     (void)ep;
 
     //gpio_clear(LED_GREEN_PORT, LED_GREEN_PIN);
     toggle_isochronous_frame(ep);
-    usbd_ep_write_packet(usbd_dev, USB_AUDIO_EP_IN_ADDRESS, waveform_data, WAVEFORM_SAMPLES*2);
+    usbd_ep_write_packet(dev, USB_AUDIO_EP_IN_ADDRESS, waveform_data, WAVEFORM_SAMPLES*2);
 }
 
 void fwapp_uac_setup(usbd_device *dev)
@@ -376,4 +413,25 @@ void fwapp_uac_setup(usbd_device *dev)
         USB_REQ_TYPE_CLASS | USB_REQ_TYPE_ENDPOINT,
         USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
         fwapp_uac_control_endpoint_request_cb);
+}
+
+void fwapp_uac_handle_set_altsetting(usbd_device *dev, uint16_t iface_idx, uint16_t alt_setting)
+{
+    (void)dev;
+
+    if (iface_idx != USB_UAC_STREAM_INTERFACE_IDX)
+        return;
+    printf("uac: curr alt setting: %u\n", alt_setting);
+    if (alt_setting == USB_AUDIO_STREAM_ALT_SETTING_PASSIVE)
+        fwapp_uac_set_stream_status(UAC_STREAM_DISABLED);
+    else if (alt_setting == USB_AUDIO_STREAM_ALT_SETTING_ACTIVE)
+        fwapp_uac_set_stream_status(UAC_STREAM_IDLE);
+}
+
+void fwapp_uac_handle_sof(void)
+{
+    if (m_uac_stream_status == UAC_STREAM_IDLE) {
+        fwapp_uac_set_stream_status(UAC_STREAM_ENABLED);
+        usbd_ep_write_packet(m_dev, USB_AUDIO_EP_IN_ADDRESS, NULL, WAVEFORM_SAMPLES*2);
+    }
 }
