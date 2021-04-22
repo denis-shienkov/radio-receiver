@@ -378,3 +378,8 @@ void fwapp_uac_handle_set_altsetting(usbd_device *dev, uint16_t iface_idx, uint1
     else if (alt_setting == USB_AUDIO_STREAM_ALT_SETTING_ACTIVE)
         fwapp_uac_set_stream_status(UAC_STREAM_IDLE);
 }
+
+void fwapp_uac_handle_sof(void)
+{
+    // TODO: Trigger data stream once here.
+}

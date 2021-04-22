@@ -99,6 +99,11 @@ static void fwapp_usb_set_altsetting_cb(usbd_device *dev, uint16_t wIndex, uint1
     fwapp_uac_handle_set_altsetting(dev, wIndex, wValue);
 }
 
+static void fwapp_usb_sof_cb(void)
+{
+    fwapp_uac_handle_sof();
+}
+
 static void fwapp_usb_setup(void)
 {
     m_dev = usbd_init(
@@ -117,6 +122,10 @@ static void fwapp_usb_setup(void)
     usbd_register_set_altsetting_callback(
         m_dev,
         fwapp_usb_set_altsetting_cb);
+
+    usbd_register_sof_callback(
+        m_dev,
+        fwapp_usb_sof_cb);
 }
 
 void fwapp_usb_start(void)
