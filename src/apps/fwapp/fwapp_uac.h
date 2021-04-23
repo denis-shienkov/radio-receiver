@@ -25,7 +25,7 @@
 #define USB_AUDIO_LEFT_CHANNEL_IDX      1
 #define USB_AUDIO_RIGHT_CHANNEL_IDX     2
 // USB audio sample rate, in Hz.
-#define USB_AUDIO_SAMPLE_RATE           8000
+#define USB_AUDIO_SAMPLE_RATE           16000
 // USB audio sub-frame size (two bytes per audio subframe).
 #define USB_AUDIO_SUB_FRAME_SIZE        2
 // USB audio bit resolution (16-bits per sample).
@@ -40,8 +40,10 @@
 
 // USB audio interface protocol.
 #define USB_AUDIO_PROTOCOL_NONE         0
-// USB audio terminal types.
+// USB audio output terminal types.
 #define TERMINAL_STREAMING              0x0101
+// USB audio input terminal types.
+#define MICROPHONE                      0x0201 // I, generic microphone.
 // USB audio embedded function terminal types.
 #define RADIO_RECEIVER                  0x0710 // I, AM/FM radio.
 // USB audio channels spatial locations.

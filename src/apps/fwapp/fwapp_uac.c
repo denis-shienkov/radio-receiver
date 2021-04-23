@@ -18,7 +18,7 @@ enum uac_stream_status {
 
 static bool toggled = false;
 
-#define WAVEFORM_SAMPLES 16
+#define WAVEFORM_SAMPLES (USB_AUDIO_SAMPLE_RATE * USB_AUDIO_CHANNELS_NUMBER / 1000)
 // Samples interleaved L,R,L,R ==> actually samples/2 'time' samples.
 int16_t waveform_data_pos[WAVEFORM_SAMPLES] = {0};
 int16_t waveform_data_neg[WAVEFORM_SAMPLES] = {0};
@@ -27,7 +27,7 @@ static void init_waveform_data(void)
 {
     // Just transmit a boring sawtooth waveform on both channels.
     for (int i = 0; i != WAVEFORM_SAMPLES/2; ++i) {
-        float deg = i * 11.25 * 2;
+        float deg = i * 11.25 * 1;
         float rad = deg * 3.1415 / 180.0;
         float d = sin(rad) * 8196;
         waveform_data_pos[i*2] = d;
