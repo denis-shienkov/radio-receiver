@@ -48,6 +48,8 @@ CppApplication {
 
     files: [
         "fwapp.c",
+        "fwapp_adc.c",
+        "fwapp_adc.h",
         "fwapp_cbuf.c",
         "fwapp_cbuf.h",
         "fwapp_hid.c",
