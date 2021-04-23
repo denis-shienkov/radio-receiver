@@ -29,7 +29,7 @@ CppApplication {
     ]
 
     cpp.staticLibraries: [
-        "c", "gcc", "nosys"
+        "c", "gcc", "m", "nosys"
     ]
 
     Properties {

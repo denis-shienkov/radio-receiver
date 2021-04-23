@@ -6,6 +6,7 @@
 
 #include <stddef.h> // for NULL
 #include <stdio.h> // for printf
+#include <math.h>
 
 #define USB_AUDIO_ALL_CHANNELS_NUMBER   (USB_AUDIO_CHANNELS_NUMBER + 1)
 
@@ -15,37 +16,26 @@ enum uac_stream_status {
     UAC_STREAM_ENABLED
 };
 
+static bool toggled = false;
+
 #define WAVEFORM_SAMPLES 16
 // Samples interleaved L,R,L,R ==> actually samples/2 'time' samples.
-int16_t waveform_data[WAVEFORM_SAMPLES] = {0};
+int16_t waveform_data_pos[WAVEFORM_SAMPLES] = {0};
+int16_t waveform_data_neg[WAVEFORM_SAMPLES] = {0};
 
 static void init_waveform_data(void)
 {
     // Just transmit a boring sawtooth waveform on both channels.
     for (int i = 0; i != WAVEFORM_SAMPLES/2; ++i) {
-        waveform_data[i*2] = i*1024;
-        waveform_data[i*2+1] = i*1024;
+        float deg = i * 11.25 * 2;
+        float rad = deg * 3.1415 / 180.0;
+        float d = sin(rad) * 8196;
+        waveform_data_pos[i*2] = d;
+        waveform_data_pos[i*2+1] = d;
+        waveform_data_neg[i*2] = -d;
+        waveform_data_neg[i*2+1] = -d;
     }
 }
-
-/* HACK: upstream libopencm3 currently does not handle isochronous endpoints
- * correctly. We must program the USB peripheral with an even/odd frame bit,
- * toggling it so that we respond to every iso IN request from the host.
- * If this toggling is not performed, we only get half the bandwidth. */
-#define USB_REBASE(x) MMIO32((x) + (USB_OTG_FS_BASE))
-#define USB_DIEPCTLX_SD1PID     (1 << 29) /* Odd frames */
-#define USB_DIEPCTLX_SD0PID     (1 << 28) /* Even frames */
-static void toggle_isochronous_frame(uint8_t ep)
-{
-    static int toggle = 0;
-    if (toggle++ % 2 == 0) {
-        USB_REBASE(OTG_DIEPCTL(ep)) |= USB_DIEPCTLX_SD0PID;
-    } else {
-        USB_REBASE(OTG_DIEPCTL(ep)) |= USB_DIEPCTLX_SD1PID;
-    }
-}
-
-
 
 static usbd_device *m_dev = NULL;
 uint8_t g_uac_stream_iface_cur_altsetting = 0;
@@ -385,9 +375,8 @@ static void fwapp_uac_stream_cb(usbd_device *dev, uint8_t ep)
 {
     (void)ep;
 
-    //gpio_clear(LED_GREEN_PORT, LED_GREEN_PIN);
-    toggle_isochronous_frame(ep);
-    usbd_ep_write_packet(dev, USB_AUDIO_EP_IN_ADDRESS, waveform_data, WAVEFORM_SAMPLES*2);
+    usbd_ep_write_packet(dev, USB_AUDIO_EP_IN_ADDRESS, toggled ? waveform_data_pos : waveform_data_neg, WAVEFORM_SAMPLES*2);
+    toggled = !toggled;
 }
 
 void fwapp_uac_setup(usbd_device *dev)
@@ -430,8 +419,4 @@ void fwapp_uac_handle_set_altsetting(usbd_device *dev, uint16_t iface_idx, uint1
 
 void fwapp_uac_handle_sof(void)
 {
-    if (m_uac_stream_status == UAC_STREAM_IDLE) {
-        fwapp_uac_set_stream_status(UAC_STREAM_ENABLED);
-        usbd_ep_write_packet(m_dev, USB_AUDIO_EP_IN_ADDRESS, NULL, WAVEFORM_SAMPLES*2);
-    }
 }
