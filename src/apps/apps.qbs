@@ -3,6 +3,7 @@ import qbs
 Project {
     name: "apps"
     references: [
-        "fwapp/fwapp.qbs"
+        "fwapp/fwapp.qbs",
+        "guiapp/guiapp.qbs",
     ]
 }
