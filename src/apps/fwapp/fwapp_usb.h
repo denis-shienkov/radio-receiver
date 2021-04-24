@@ -1,8 +1,6 @@
 #ifndef FWAPP_USB_H
 #define FWAPP_USB_H
 
-#include <libopencm3/usb/usbd.h>
-
 // USB BCD version.
 #define USB_BCD_2                       0x0200 // 2.0
 // USB device classe.
@@ -47,6 +45,8 @@
 
 #define get_byte_hi(word)        (word >> 8)
 #define get_byte_lo(word)        (word & 0xFF)
+
+struct usb_setup_data;
 
 void fwapp_usb_start(void);
 void fwapp_usb_stop(void);
