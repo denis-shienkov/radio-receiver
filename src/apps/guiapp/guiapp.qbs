@@ -7,6 +7,22 @@ QtApplication {
     Depends { name: "Qt"; submodules: ["widgets"] }
 
     files: [
-        "guiapp.cpp"
+        "controldeviceinfo.cpp",
+        "controldeviceinfo.h",
+        "controldeviceinfo_p.h",
+        "guiapp.cpp",
+
     ]
+
+    Group {
+        name: "windows"
+        files: [
+            "controldeviceinfo_win.cpp",
+        ]
+    }
+
+    Properties {
+        condition: qbs.targetOS.contains("windows")
+        cpp.staticLibraries: [ "setupapi", "hid" ]
+    }
 }
