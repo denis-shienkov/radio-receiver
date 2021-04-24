@@ -4,6 +4,7 @@ import qbs.FileInfo
 import "libopencm3.js" as LIBOPENCM3
 
 Project {
+    condition: !qbs.targetOS.contains("windows") && !qbs.targetOS.contains("linux")
     name: "libopencm3-project"
 
     property path libopencm3SourcesPath: LIBOPENCM3.sourcesPath(project)
