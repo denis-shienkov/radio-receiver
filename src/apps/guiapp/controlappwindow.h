@@ -18,6 +18,7 @@ public:
     ~ControlAppWindow();
 
 private:
+    void enumerateDevices();
     std::unique_ptr<Ui::ControlAppWindow> m_ui;
 };
 
