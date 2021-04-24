@@ -7,11 +7,13 @@ QtApplication {
     Depends { name: "Qt"; submodules: ["widgets"] }
 
     files: [
+        "controlappwindow.cpp",
+        "controlappwindow.h",
+        "controlappwindow.ui",
         "controldeviceinfo.cpp",
         "controldeviceinfo.h",
         "controldeviceinfo_p.h",
         "guiapp.cpp",
-
     ]
 
     Group {
