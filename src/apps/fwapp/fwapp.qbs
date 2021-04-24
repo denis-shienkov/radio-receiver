@@ -1,6 +1,7 @@
 import qbs
 
 CppApplication {
+    condition: !qbs.targetOS.contains("windows") && !qbs.targetOS.contains("linux")
     name: "fwapp"
 
     Depends { name: "libopencm3" }
