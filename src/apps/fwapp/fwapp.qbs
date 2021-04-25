@@ -49,6 +49,7 @@ CppApplication {
 
     files: [
         "fwapp.c",
+        "fwapp.h",
         "fwapp_adc.c",
         "fwapp_adc.h",
         "fwapp_cbuf.c",
@@ -57,6 +58,8 @@ CppApplication {
         "fwapp_hid.h",
         "fwapp_led.c",
         "fwapp_led.h",
+        "fwapp_proto.c",
+        "fwapp_proto.h",
         "fwapp_systick.c",
         "fwapp_systick.h",
         "fwapp_trace.c",

@@ -1,5 +1,5 @@
+#include "fwapp.h"
 #include "fwapp_hid.h"
-#include "fwapp_usb.h"
 
 #include <libopencm3/usb/hid.h>
 
@@ -8,6 +8,8 @@
 static usbd_device *m_dev = NULL;
 static fwapp_hid_report_cb m_recv_report_cb = NULL;
 static fwapp_hid_report_cb m_send_report_cb = NULL;
+static volatile bool m_need_call_recv_cb = false;
+static volatile bool m_need_call_send_cb = false;
 
 // This HID report descriptor declares the following usages:
 // - input report, in 64 bytes
@@ -117,8 +119,7 @@ static void fwapp_hid_data_send_cb(usbd_device *dev, uint8_t ep)
     (void)dev;
     (void)ep;
 
-    if (m_send_report_cb)
-        m_send_report_cb();
+    m_need_call_send_cb = true;
 }
 
 static void fwapp_hid_data_recv_cb(usbd_device *dev, uint8_t ep)
@@ -126,8 +127,7 @@ static void fwapp_hid_data_recv_cb(usbd_device *dev, uint8_t ep)
     (void)dev;
     (void)ep;
 
-    if (m_recv_report_cb)
-        m_recv_report_cb();
+    m_need_call_recv_cb = true;
 }
 
 void fwapp_hid_setup(usbd_device *dev)
@@ -151,6 +151,21 @@ void fwapp_hid_setup(usbd_device *dev)
         USB_REQ_TYPE_STANDARD | USB_REQ_TYPE_INTERFACE,
         USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
         fwapp_hid_control_request_cb);
+}
+
+void fwapp_hid_schedule(void)
+{
+    if (m_need_call_recv_cb) {
+        m_need_call_recv_cb = false;
+        if (m_recv_report_cb)
+            m_recv_report_cb();
+    }
+
+    if (m_need_call_send_cb) {
+        m_need_call_send_cb = false;
+        if (m_send_report_cb)
+            m_send_report_cb();
+    }
 }
 
 uint16_t fwapp_hid_recv_report(uint8_t *report, uint16_t length)

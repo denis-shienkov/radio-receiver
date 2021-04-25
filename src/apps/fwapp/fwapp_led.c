@@ -7,7 +7,7 @@
 #define LED_PIN     GPIO13
 
 static volatile uint32_t m_counter = 0;
-uint32_t m_freq_hz = 1;
+static uint32_t m_freq_hz = 1;
 
 static void fwapp_led_reload_counter(void)
 {

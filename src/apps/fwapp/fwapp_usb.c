@@ -1,3 +1,4 @@
+#include "fwapp.h"
 #include "fwapp_hid.h"
 #include "fwapp_uac.h"
 #include "fwapp_usb.h"

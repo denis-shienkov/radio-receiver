@@ -1,4 +1,6 @@
+#include "fwapp_hid.h"
 #include "fwapp_led.h"
+#include "fwapp_proto.h"
 #include "fwapp_systick.h"
 #include "fwapp_trace.h"
 #include "fwapp_usb.h"
@@ -18,12 +20,15 @@ int main(void)
     fwapp_led_start(5);
     fwapp_systick_start(1000);
     fwapp_usb_start();
+    fwapp_proto_start();
 
     printf("Hello\n");
 
     while (1) {
         fwapp_led_schedule();
         fwapp_usb_schedule();
+        fwapp_hid_schedule();
+        fwapp_proto_schedule();
     }
 
     return 0;
