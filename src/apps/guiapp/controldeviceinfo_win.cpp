@@ -2,7 +2,7 @@
 #include "controldeviceinfo_p.h"
 #include <QStringList>
 
-#include "../fwapp/fwapp_usb.h"
+#include "../fwapp/fwapp.h"
 
 #include <windows.h>
 #include <setupapi.h>
