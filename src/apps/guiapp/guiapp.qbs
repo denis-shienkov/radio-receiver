@@ -16,6 +16,8 @@ QtApplication {
         "controldeviceinfo.cpp",
         "controldeviceinfo.h",
         "controldeviceinfo_p.h",
+        "controlreport.cpp",
+        "controlreport.h",
         "guiapp.cpp",
     ]
 
