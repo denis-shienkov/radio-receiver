@@ -3,6 +3,9 @@
 
 #include <stdio.h> // for printf
 
+static uint8_t payload[128] = {0};
+static uint16_t length = 0;
+
 static void fwapp_dump_report(const uint8_t *data, uint16_t len)
 {
     for (uint16_t i = 0; i < len; ++i) {
@@ -13,15 +16,17 @@ static void fwapp_dump_report(const uint8_t *data, uint16_t len)
 
 static void fwapp_proto_recv_cb(void)
 {
-    uint8_t report[128] = {0};
-    const uint16_t bytes_read = fwapp_hid_recv_report(report, sizeof(report));
-    printf("pro: recv %u\n", bytes_read);
-    fwapp_dump_report(report, bytes_read);
+    length = fwapp_hid_recv_report(payload, sizeof(payload));
+    printf("pro: recv %u\n", length);
+    fwapp_dump_report(payload, length);
+
+    length = fwapp_hid_send_report(payload, length);
 }
 
 static void fwapp_proto_send_cb(void)
 {
-
+    printf("pro: send %u\n", length);
+    fwapp_dump_report(payload, length);
 }
 
 void fwapp_proto_start(void)
