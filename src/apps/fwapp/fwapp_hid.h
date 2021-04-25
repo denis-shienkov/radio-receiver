@@ -14,7 +14,7 @@
 // USB HID endpoint buffer size.
 #define USB_HID_EP_LENGTH               64
 // USB HID endpoint polling interval.
-#define USB_HID_EP_POLL_INTERVAL        0x20
+#define USB_HID_EP_INTERVAL             0x01
 // USB HID report data size.
 #define UDB_HID_REPORT_DATA_SIZE        32
 

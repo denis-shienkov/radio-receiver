@@ -9,8 +9,9 @@ static usbd_device *m_dev = NULL;
 static fwapp_hid_report_cb m_recv_report_cb = NULL;
 static fwapp_hid_report_cb m_send_report_cb = NULL;
 
-// This HID report descriptor declares three usages:
-// - feature report, in 32 bytes
+// This HID report descriptor declares the following usages:
+// - input report, in 64 bytes
+// - output report, in 64 bytes
 static const uint8_t m_hid_report_dsc[] = {
     0x06, 0x00, 0xff,              // USAGE_PAGE (Vendor Defined Page 1)
     0x09, 0x01,                    // USAGE (Vendor Usage 1)
@@ -18,9 +19,12 @@ static const uint8_t m_hid_report_dsc[] = {
     0x15, 0x00,                    //   LOGICAL_MINIMUM (0)
     0x26, 0xff, 0x00,              //   LOGICAL_MAXIMUM (255)
     0x75, 0x08,                    //   REPORT_SIZE (8)
-    0x95, 0x40,                    //   REPORT_COUNT (32)
+    0x95, 0x40,                    //   REPORT_COUNT (64)
     0x09, 0x01,                    //   USAGE (Vendor Usage 1)
-    0xb1, 0x02,                    //   FEATURE (Data,Var,Abs)
+    0x81, 0x02,                    //   INPUT (Data,Var,Abs)
+    0x95, 0x40,                    //   REPORT_COUNT (64)
+    0x09, 0x01,                    //   USAGE (Vendor Usage 1)
+    0x91, 0x02,                    //   OUTPUT (Data,Var,Abs)
     0xc0                           // END_COLLECTION
 };
 
@@ -55,7 +59,7 @@ static const struct usb_endpoint_descriptor m_hid_endpoints[USB_HID_EP_COUNT] = 
         .bEndpointAddress = USB_HID_EP_IN_ADDRESS,
         .bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
         .wMaxPacketSize = USB_HID_EP_LENGTH,
-        .bInterval = USB_HID_EP_POLL_INTERVAL
+        .bInterval = USB_HID_EP_INTERVAL
     },
     {
         .bLength = USB_DT_ENDPOINT_SIZE,
@@ -63,7 +67,7 @@ static const struct usb_endpoint_descriptor m_hid_endpoints[USB_HID_EP_COUNT] = 
         .bEndpointAddress = USB_HID_EP_OUT_ADDRESS,
         .bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
         .wMaxPacketSize = USB_HID_EP_LENGTH,
-        .bInterval = USB_HID_EP_POLL_INTERVAL
+        .bInterval = USB_HID_EP_INTERVAL
     }
 };
 
