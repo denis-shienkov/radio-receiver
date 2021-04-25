@@ -4,12 +4,15 @@ QtApplication {
     condition: qbs.targetOS.contains("windows") || qbs.targetOS.contains("linux")
     name: "guiapp"
 
-    Depends { name: "Qt"; submodules: ["widgets"] }
+    Depends { name: "Qt"; submodules: ["core-private", "widgets"] }
 
     files: [
         "controlappwindow.cpp",
         "controlappwindow.h",
         "controlappwindow.ui",
+        "controldevice.cpp",
+        "controldevice.h",
+        "controldevice_p.h",
         "controldeviceinfo.cpp",
         "controldeviceinfo.h",
         "controldeviceinfo_p.h",
@@ -19,6 +22,7 @@ QtApplication {
     Group {
         name: "windows"
         files: [
+            "controldevice_win.cpp",
             "controldeviceinfo_win.cpp",
         ]
     }
