@@ -103,6 +103,8 @@ void ControlDevice::sendReport(const QByteArray &report)
 {
     Q_D(ControlDevice);
 
+    if (report.isEmpty())
+        return;
     d->outgoingReports.append(report);
 
 #if defined (Q_OS_WIN32)

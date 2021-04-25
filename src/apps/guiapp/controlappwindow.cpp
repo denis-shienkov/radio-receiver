@@ -9,6 +9,7 @@ ControlAppWindow::ControlAppWindow(QWidget *parent)
     , m_device(new ControlDevice(this))
 {
     m_ui->setupUi(this);
+    m_ui->deviceSendLineEdit->setInputMask("hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh");
     enumerateDevices();
 
     connect(m_ui->deviceOpenButton, &QPushButton::clicked, this, [this]{
@@ -22,15 +23,23 @@ ControlAppWindow::ControlAppWindow(QWidget *parent)
         }
     });
 
+    connect(m_ui->deviceSendButton, &QPushButton::clicked, this, [this] {
+        const QByteArray data = QByteArray::fromHex(m_ui->deviceSendLineEdit->text().toLocal8Bit());
+        m_device->sendReport(data);
+    });
+
     auto handleDeviceState = [this](ControlDevice::ControlDeviceState state) {
         if (state == ControlDevice::ControlDeviceState::UnconnectedState) {
             m_ui->deviceOpenButton->setEnabled(true);
+            m_ui->deviceSendButton->setEnabled(false);
             m_ui->deviceOpenButton->setText(tr("Open"));
         } else if (state == ControlDevice::ControlDeviceState::ConnectedState) {
             m_ui->deviceOpenButton->setEnabled(true);
+            m_ui->deviceSendButton->setEnabled(true);
             m_ui->deviceOpenButton->setText(tr("Close"));
         } else {
             m_ui->deviceOpenButton->setEnabled(false);
+            m_ui->deviceSendButton->setEnabled(false);
         }
     };
     connect(m_device, &ControlDevice::stateChanged, this, handleDeviceState);

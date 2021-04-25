@@ -16,15 +16,15 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout">
-      <item>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="0" column="0">
        <widget class="QLabel" name="deviceLabel">
         <property name="text">
          <string>Device:</string>
         </property>
        </widget>
       </item>
-      <item>
+      <item row="0" column="1">
        <widget class="QComboBox" name="deviceComboBox">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -34,10 +34,20 @@
         </property>
        </widget>
       </item>
-      <item>
+      <item row="0" column="2" colspan="2">
        <widget class="QPushButton" name="deviceOpenButton">
         <property name="text">
          <string>Open</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" colspan="3">
+       <widget class="QLineEdit" name="deviceSendLineEdit"/>
+      </item>
+      <item row="1" column="3">
+       <widget class="QPushButton" name="deviceSendButton">
+        <property name="text">
+         <string>Send</string>
         </property>
        </widget>
       </item>
