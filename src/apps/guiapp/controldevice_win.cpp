@@ -132,7 +132,9 @@ bool ControlDevicePrivate::completeAsyncRecv(DWORD bytesTransferred, DWORD error
     }
 
     if (bytesTransferred == capabilities.recvReportSize) {
-        recvReports.append(ControlReport{recvData});
+        const quint8 identifier = recvData.at(0);
+        const QByteArray payload = recvData.right(recvData.size() - 1);
+        recvReports.append(ControlReport{identifier, payload});
         emit q->reportsReceived();
     } else {
         q->setError(ControlDevice::ControlDeviceError::ReadError,

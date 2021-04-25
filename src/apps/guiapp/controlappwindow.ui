@@ -41,13 +41,44 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="0" colspan="3">
-       <widget class="QLineEdit" name="deviceSendLineEdit"/>
+      <item row="1" column="0">
+       <widget class="QLabel" name="deviceSendPayloadLabel">
+        <property name="text">
+         <string>Payload:</string>
+        </property>
+       </widget>
       </item>
-      <item row="1" column="3">
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="deviceSendPayloadLineEdit"/>
+      </item>
+      <item row="1" column="2" rowspan="2" colspan="2">
        <widget class="QPushButton" name="deviceSendButton">
         <property name="text">
          <string>Send</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0" rowspan="2">
+       <widget class="QLabel" name="deviceRecvPayloadLabel">
+        <property name="text">
+         <string>Payload:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="3" rowspan="2">
+       <widget class="QPushButton" name="deviceRecvButton">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Recv</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="deviceRecvPayloadLineEdit">
+        <property name="readOnly">
+         <bool>true</bool>
         </property>
        </widget>
       </item>

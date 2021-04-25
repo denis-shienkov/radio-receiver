@@ -9,7 +9,8 @@ ControlAppWindow::ControlAppWindow(QWidget *parent)
     , m_device(new ControlDevice(this))
 {
     m_ui->setupUi(this);
-    m_ui->deviceSendLineEdit->setInputMask("hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh");
+    m_ui->deviceSendPayloadLineEdit->setInputMask("hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh");
+    m_ui->deviceRecvPayloadLineEdit->setInputMask("hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh");
     enumerateDevices();
 
     connect(m_ui->deviceOpenButton, &QPushButton::clicked, this, [this]{
@@ -24,8 +25,8 @@ ControlAppWindow::ControlAppWindow(QWidget *parent)
     });
 
     connect(m_ui->deviceSendButton, &QPushButton::clicked, this, [this] {
-        const QByteArray data = QByteArray::fromHex(m_ui->deviceSendLineEdit->text().toLocal8Bit());
-        ControlReport report(data);
+        const QByteArray payload = QByteArray::fromHex(m_ui->deviceSendPayloadLineEdit->text().toLocal8Bit());
+        ControlReport report(payload);
         m_device->sendReport(report);
     });
 
@@ -44,6 +45,11 @@ ControlAppWindow::ControlAppWindow(QWidget *parent)
         }
     };
     connect(m_device, &ControlDevice::stateChanged, this, handleDeviceState);
+
+    connect(m_device, &ControlDevice::reportsReceived, this, [this]{
+        const auto report = m_device->receiveReport();
+        m_ui->deviceRecvPayloadLineEdit->setText(QString::fromLocal8Bit(report.payload().toHex()));
+    });
 
     handleDeviceState(m_device->state());
 }
