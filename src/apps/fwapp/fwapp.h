@@ -64,8 +64,8 @@
 #define USB_HID_EP_LENGTH               64
 // USB HID endpoint polling interval.
 #define USB_HID_EP_INTERVAL             0x01
-// USB HID report data size.
-#define UDB_HID_REPORT_DATA_SIZE        32
+// USB HID report payload size.
+#define UDB_HID_REPORT_PAYLOAD_SIZE     32
 
 //
 // Common USB UAC confgiuration.

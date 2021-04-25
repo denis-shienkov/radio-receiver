@@ -15,19 +15,19 @@ static volatile bool m_need_call_send_cb = false;
 // - input report, in 64 bytes
 // - output report, in 64 bytes
 static const uint8_t m_hid_report_dsc[] = {
-    0x06, 0x00, 0xff,              // USAGE_PAGE (Vendor Defined Page 1)
-    0x09, 0x01,                    // USAGE (Vendor Usage 1)
-    0xa1, 0x01,                    // COLLECTION (Application)
-    0x15, 0x00,                    //   LOGICAL_MINIMUM (0)
-    0x26, 0xff, 0x00,              //   LOGICAL_MAXIMUM (255)
-    0x75, 0x08,                    //   REPORT_SIZE (8)
-    0x95, 0x40,                    //   REPORT_COUNT (64)
-    0x09, 0x01,                    //   USAGE (Vendor Usage 1)
-    0x81, 0x02,                    //   INPUT (Data,Var,Abs)
-    0x95, 0x40,                    //   REPORT_COUNT (64)
-    0x09, 0x01,                    //   USAGE (Vendor Usage 1)
-    0x91, 0x02,                    //   OUTPUT (Data,Var,Abs)
-    0xc0                           // END_COLLECTION
+    0x06, 0x00, 0xff,                   // USAGE_PAGE (Vendor Defined Page 1)
+    0x09, 0x01,                         // USAGE (Vendor Usage 1)
+    0xa1, 0x01,                         // COLLECTION (Application)
+    0x15, 0x00,                         //   LOGICAL_MINIMUM (0)
+    0x26, 0xff, 0x00,                   //   LOGICAL_MAXIMUM (255)
+    0x75, 0x08,                         //   REPORT_SIZE (8)
+    0x95, UDB_HID_REPORT_PAYLOAD_SIZE,  //   REPORT_COUNT (32)
+    0x09, 0x01,                         //   USAGE (Vendor Usage 1)
+    0x81, 0x02,                         //   INPUT (Data,Var,Abs)
+    0x95, UDB_HID_REPORT_PAYLOAD_SIZE,  //   REPORT_COUNT (32)
+    0x09, 0x01,                         //   USAGE (Vendor Usage 1)
+    0x91, 0x02,                         //   OUTPUT (Data,Var,Abs)
+    0xc0                                // END_COLLECTION
 };
 
 struct usb_hid_report {
@@ -170,8 +170,8 @@ void fwapp_hid_schedule(void)
 
 uint16_t fwapp_hid_recv_report(uint8_t *report, uint16_t length)
 {
-    if (length > UDB_HID_REPORT_DATA_SIZE)
-        length = UDB_HID_REPORT_DATA_SIZE;
+    if (length > UDB_HID_REPORT_PAYLOAD_SIZE)
+        length = UDB_HID_REPORT_PAYLOAD_SIZE;
 
     return usbd_ep_read_packet(
         m_dev,
@@ -182,8 +182,8 @@ uint16_t fwapp_hid_recv_report(uint8_t *report, uint16_t length)
 
 uint16_t fwapp_hid_send_report(const uint8_t *report, uint16_t length)
 {
-    if (length > UDB_HID_REPORT_DATA_SIZE)
-        length = UDB_HID_REPORT_DATA_SIZE;
+    if (length > UDB_HID_REPORT_PAYLOAD_SIZE)
+        length = UDB_HID_REPORT_PAYLOAD_SIZE;
 
     return usbd_ep_write_packet(
         m_dev,
