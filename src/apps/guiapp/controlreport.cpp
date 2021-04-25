@@ -13,6 +13,11 @@ ControlReport::ControlReport(quint8 identifier, const QByteArray &payload)
     setPayload(payload);
 }
 
+bool ControlReport::isEmpty() const noexcept
+{
+    return m_payload.isEmpty();
+}
+
 void ControlReport::setIdentifier(quint8 identifier) noexcept
 {
     m_identifier = identifier;
@@ -27,10 +32,10 @@ void ControlReport::setPayload(const QByteArray &payload)
 {
     m_payload = payload;
     const auto length = m_payload.size();
-    if (length < UDB_HID_REPORT_DATA_SIZE)
-        m_payload.append(QByteArray(UDB_HID_REPORT_DATA_SIZE - length, 0));
+    if (length < UDB_HID_REPORT_PAYLOAD_SIZE)
+        m_payload.append(QByteArray(UDB_HID_REPORT_PAYLOAD_SIZE - length, 0));
     else
-        m_payload = m_payload.left(UDB_HID_REPORT_DATA_SIZE);
+        m_payload = m_payload.left(UDB_HID_REPORT_PAYLOAD_SIZE);
 }
 
 QByteArray ControlReport::payload() const
@@ -44,4 +49,9 @@ QByteArray ControlReport::data() const
     result.append(m_identifier);
     result.append(m_payload);
     return result;
+}
+
+qint16 ControlReport::size() const noexcept
+{
+    return sizeof(m_identifier) + m_payload.size();
 }

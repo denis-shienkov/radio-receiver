@@ -25,7 +25,8 @@ ControlAppWindow::ControlAppWindow(QWidget *parent)
 
     connect(m_ui->deviceSendButton, &QPushButton::clicked, this, [this] {
         const QByteArray data = QByteArray::fromHex(m_ui->deviceSendLineEdit->text().toLocal8Bit());
-        m_device->sendReport(data);
+        ControlReport report(data);
+        m_device->sendReport(report);
     });
 
     auto handleDeviceState = [this](ControlDevice::ControlDeviceState state) {

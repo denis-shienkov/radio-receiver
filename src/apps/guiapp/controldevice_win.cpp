@@ -3,12 +3,14 @@
 
 #include "controldevice_p.h"
 
+#include "../fwapp/fwapp.h"
+
 #include <windows.h>
 #include <hidsdi.h>
 
 #include <QDebug>
 
-static HIDP_CAPS fetchCapabilities(HANDLE h)
+static ControlDevicePrivate::Capabilities fetchCapabilities(HANDLE h)
 {
     PHIDP_PREPARSED_DATA pd = nullptr;
     if (!::HidD_GetPreparsedData(h, &pd))
@@ -18,7 +20,7 @@ static HIDP_CAPS fetchCapabilities(HANDLE h)
     ::HidD_FreePreparsedData(pd);
     if (st != HIDP_STATUS_SUCCESS)
         return {};
-    return caps;
+    return {caps.InputReportByteLength, caps.OutputReportByteLength};
 }
 
 static bool setBuffersCnt(HANDLE h, int len)
@@ -49,49 +51,61 @@ void ControlDevicePrivate::close()
 {
     Q_Q(ControlDevice);
 
-//    cancelAsyncRead();
-//    cancelAsyncWrite();
+//    cancelAsyncRecv();
+//    cancelAsyncSend();
 
     if (!::CloseHandle(deviceHandle))
         q->setError(ControlDevice::ControlDeviceError::CloseError, qt_error_string(::GetLastError()));
 
     deviceHandle = INVALID_HANDLE_VALUE;
 
-    incomingReports.clear();
-    outgoingReports.clear();
+    recvReports.clear();
+    sendReports.clear();
 
-    incomingReport.clear();
-    outgoingReport.clear();
+    recvData.clear();
+    sendData.clear();
 }
 
 bool ControlDevicePrivate::setup()
 {
     Q_Q(ControlDevice);
 
-    const HIDP_CAPS caps = fetchCapabilities(deviceHandle);
-    incomingReport.resize(caps.InputReportByteLength);
-    outgoingReport.resize(caps.OutputReportByteLength);
+    capabilities = fetchCapabilities(deviceHandle);
 
-    incomingOverlapped = std::make_unique<Overlapped>(this);
+    enum { EXPECTED_REPORT_SIZE = UDB_HID_REPORT_PAYLOAD_SIZE + 1};
+
+    if (capabilities.recvReportSize != EXPECTED_REPORT_SIZE) {
+        q->setError(ControlDevice::ControlDeviceError::OpenError,
+                    ControlDevice::tr("Input report size mismatch"));
+        return false;
+    } else if (capabilities.sendReportSize != EXPECTED_REPORT_SIZE) {
+        q->setError(ControlDevice::ControlDeviceError::OpenError,
+                    ControlDevice::tr("Output report size mismatch"));
+        return false;
+    }
+
+    recvOverlapped = std::make_unique<Overlapped>(this);
+    sendOverlapped = std::make_unique<Overlapped>(this);
 
     setBuffersCnt(deviceHandle, 512);
-    if (!startAsyncRead())
+    if (!startAsyncRecv())
         return false;
     return true;
 }
 
-bool ControlDevicePrivate::startAsyncRead()
+bool ControlDevicePrivate::startAsyncRecv()
 {
     Q_Q(ControlDevice);
 
-    incomingOverlapped->clear();
-    if (!::ReadFileEx(deviceHandle, incomingReport.data(), incomingReport.size(), incomingOverlapped.get(),
+    recvData.resize(capabilities.recvReportSize);
+    recvOverlapped->clear();
+    if (!::ReadFileEx(deviceHandle, recvData.data(), recvData.size(), recvOverlapped.get(),
                       [](DWORD errorCode, DWORD bytesTransfered, OVERLAPPED *overlappedBase) {
                           const auto overlapped = static_cast<Overlapped *>(overlappedBase);
                           if (overlapped->dptr) {
-                              const bool success = overlapped->dptr->completeAsyncRead(bytesTransfered, errorCode);
+                              const bool success = overlapped->dptr->completeAsyncRecv(bytesTransfered, errorCode);
                               if (success)
-                                  overlapped->dptr->startAsyncRead();
+                                  overlapped->dptr->startAsyncRecv();
                           }})) {
         const DWORD errorCode = ::GetLastError();
         if (errorCode != ERROR_IO_PENDING) {
@@ -102,7 +116,7 @@ bool ControlDevicePrivate::startAsyncRead()
     return true;
 }
 
-bool ControlDevicePrivate::completeAsyncRead(DWORD bytesTransferred, DWORD errorCode)
+bool ControlDevicePrivate::completeAsyncRecv(DWORD bytesTransferred, DWORD errorCode)
 {
     Q_Q(ControlDevice);
 
@@ -117,18 +131,21 @@ bool ControlDevicePrivate::completeAsyncRead(DWORD bytesTransferred, DWORD error
         return false; // stop
     }
 
-    if (bytesTransferred > 0) { // TODO: need to check for the input chunk size?
-        incomingReports.append(incomingReport);
+    if (bytesTransferred == capabilities.recvReportSize) {
+        recvReports.append(ControlReport{recvData});
         emit q->reportsReceived();
+    } else {
+        q->setError(ControlDevice::ControlDeviceError::ReadError,
+                    ControlDevice::tr("Input report size mismatch"));
     }
     return true;
 }
 
-bool ControlDevicePrivate::cancelAsyncRead()
+bool ControlDevicePrivate::cancelAsyncRecv()
 {
     Q_Q(ControlDevice);
 
-    if (::CancelIoEx(deviceHandle, incomingOverlapped.get()) == 0) {
+    if (::CancelIoEx(deviceHandle, recvOverlapped.get()) == 0) {
         const DWORD errorCode = ::GetLastError();
         if (errorCode != ERROR_NOT_FOUND) {
             q->setError(ControlDevice::ControlDeviceError::ReadError, qt_error_string(errorCode));
@@ -138,26 +155,25 @@ bool ControlDevicePrivate::cancelAsyncRead()
     return true;
 }
 
-bool ControlDevicePrivate::startAsyncWrite()
+bool ControlDevicePrivate::startAsyncSend()
 {
     Q_Q(ControlDevice);
 
-    if (outgoingReports.isEmpty())
+    if (sendReports.isEmpty())
         return true; // Nothing to write.
-    if (!outgoingReport.isEmpty())
+    if (!sendData.isEmpty())
         return true; // Already is pending.
 
-    outgoingReport = outgoingReports.first();
-
-    incomingOverlapped->clear();
-    if (!::WriteFileEx(deviceHandle, outgoingReport.data(), outgoingReport.size(), outgoingOverlapped.get(),
-                      [](DWORD errorCode, DWORD bytesTransfered, OVERLAPPED *overlappedBase) {
-                          const auto overlapped = static_cast<Overlapped *>(overlappedBase);
-                          if (overlapped->dptr) {
-                              const bool success = overlapped->dptr->completeAsyncWrite(bytesTransfered, errorCode);
-                              if (success)
-                                  overlapped->dptr->startAsyncWrite();
-                          }})) {
+    sendData = sendReports.first().data();
+    sendOverlapped->clear();
+    if (!::WriteFileEx(deviceHandle, sendData.data(), sendData.size(), sendOverlapped.get(),
+                       [](DWORD errorCode, DWORD bytesTransfered, OVERLAPPED *overlappedBase) {
+                           const auto overlapped = static_cast<Overlapped *>(overlappedBase);
+                           if (overlapped->dptr) {
+                               const bool success = overlapped->dptr->completeAsyncSend(bytesTransfered, errorCode);
+                               if (success)
+                                   overlapped->dptr->startAsyncSend();
+                           }})) {
         const DWORD errorCode = ::GetLastError();
         if (errorCode != ERROR_IO_PENDING) {
             q->setError(ControlDevice::ControlDeviceError::WriteError, qt_error_string(errorCode));
@@ -167,7 +183,7 @@ bool ControlDevicePrivate::startAsyncWrite()
     return true;
 }
 
-bool ControlDevicePrivate::completeAsyncWrite(DWORD bytesTransferred, DWORD errorCode)
+bool ControlDevicePrivate::completeAsyncSend(DWORD bytesTransferred, DWORD errorCode)
 {
     Q_Q(ControlDevice);
 
@@ -182,20 +198,23 @@ bool ControlDevicePrivate::completeAsyncWrite(DWORD bytesTransferred, DWORD erro
         return false; // stop
     }
 
-    if (bytesTransferred > 0) { // TODO: need to check for the output chunk size?
-        outgoingReport.clear();
-        outgoingReports.takeFirst(); // Now we can remove sent report.
+    if (bytesTransferred == capabilities.sendReportSize) {
+        sendData.clear();
+        sendReports.takeFirst(); // Now we can remove sent report.
         emit q->reportsWritten(1);
+    } else {
+        q->setError(ControlDevice::ControlDeviceError::WriteError,
+                    ControlDevice::tr("Output report size mismatch"));
     }
 
     return true;
 }
 
-bool ControlDevicePrivate::cancelAsyncWrite()
+bool ControlDevicePrivate::cancelAsyncSend()
 {
     Q_Q(ControlDevice);
 
-    if (::CancelIoEx(deviceHandle, outgoingOverlapped.get()) == 0) {
+    if (::CancelIoEx(deviceHandle, sendOverlapped.get()) == 0) {
         const DWORD errorCode = ::GetLastError();
         if (errorCode != ERROR_NOT_FOUND) {
             q->setError(ControlDevice::ControlDeviceError::WriteError, qt_error_string(errorCode));

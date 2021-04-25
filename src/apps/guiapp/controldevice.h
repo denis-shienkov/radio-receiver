@@ -1,6 +1,8 @@
 #ifndef CONTROLDEVICE_H
 #define CONTROLDEVICE_H
 
+#include "controlreport.h"
+
 #include <QObject>
 
 class ControlDevicePrivate;
@@ -48,8 +50,8 @@ public:
     qint64 reportsAvailable() const;
     qint64 reportsToWrite() const;
 
-    void sendReport(const QByteArray &report);
-    QByteArray receiveReport();
+    void sendReport(const ControlReport &report);
+    ControlReport receiveReport();
 
 signals:
     void systemPathChanged(const QString &systemPath);

@@ -91,32 +91,32 @@ void ControlDevice::disconnectDevice()
 
 qint64 ControlDevice::reportsAvailable() const
 {
-    return d_func()->incomingReports.count();
+    return d_func()->recvReports.count();
 }
 
 qint64 ControlDevice::reportsToWrite() const
 {
-    return d_func()->outgoingReports.count();
+    return d_func()->sendReports.count();
 }
 
-void ControlDevice::sendReport(const QByteArray &report)
+void ControlDevice::sendReport(const ControlReport &report)
 {
     Q_D(ControlDevice);
 
-    if (report.isEmpty())
+    if (report.size() != d->capabilities.sendReportSize)
         return;
-    d->outgoingReports.append(report);
+    d->sendReports.append(report);
 
 #if defined (Q_OS_WIN32)
-    d->startAsyncWrite();
+    d->startAsyncSend();
 #endif
 }
 
-QByteArray ControlDevice::receiveReport()
+ControlReport ControlDevice::receiveReport()
 {
     Q_D(ControlDevice);
 
-    if (d->incomingReports.isEmpty())
-        return {}; // empty report
-    return d->incomingReports.takeFirst();
+    if (d->recvReports.isEmpty())
+        return ControlReport{{}}; // empty report
+    return d->recvReports.takeFirst();
 }

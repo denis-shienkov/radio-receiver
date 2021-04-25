@@ -26,22 +26,29 @@ public:
     QString systemPath;
     QString errorString;
 
-    QVector<QByteArray> incomingReports;
-    QVector<QByteArray> outgoingReports;
+    QVector<ControlReport> recvReports;
+    QVector<ControlReport> sendReports;
 
     ControlDevice::ControlDeviceState state = ControlDevice::ControlDeviceState::UnconnectedState;
     ControlDevice::ControlDeviceError error = ControlDevice::ControlDeviceError::NoError;
 
-    QByteArray incomingReport;
-    QByteArray outgoingReport;
+    QByteArray recvData;
+    QByteArray sendData;
+
+    struct Capabilities {
+        quint16 recvReportSize = 0;
+        quint16 sendReportSize = 0;
+    };
+
+    Capabilities capabilities = {};
 
 #if defined(Q_OS_WIN32)
-    bool startAsyncRead();
-    bool completeAsyncRead(DWORD bytesTransferred, DWORD errorCode);
-    bool cancelAsyncRead();
-    bool startAsyncWrite();
-    bool completeAsyncWrite(DWORD bytesTransferred, DWORD errorCode);
-    bool cancelAsyncWrite();
+    bool startAsyncRecv();
+    bool completeAsyncRecv(DWORD bytesTransferred, DWORD errorCode);
+    bool cancelAsyncRecv();
+    bool startAsyncSend();
+    bool completeAsyncSend(DWORD bytesTransferred, DWORD errorCode);
+    bool cancelAsyncSend();
 
     HANDLE deviceHandle = INVALID_HANDLE_VALUE;
 
@@ -60,8 +67,8 @@ public:
         ControlDevicePrivate *dptr = nullptr;
     };
 
-    std::unique_ptr<class Overlapped> incomingOverlapped;
-    std::unique_ptr<class Overlapped> outgoingOverlapped;
+    std::unique_ptr<class Overlapped> recvOverlapped;
+    std::unique_ptr<class Overlapped> sendOverlapped;
 #endif
 };
 
