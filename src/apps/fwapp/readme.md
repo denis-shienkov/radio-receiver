@@ -15,7 +15,7 @@
 
   * PC13 - LED (blinking)
 
-# Used clocks
+# Used clocks from HSE - 8 MHz
 
 ## USB
 
@@ -23,15 +23,15 @@
 
 ## AHB
 
-  * HCLK (AHB, core, mem, DMA) - 48 MHz
-  * SYSTIMCLK (System timer) - 48/8 = 6 MHz
-  * FCLK - 48 MHz
+  * HCLK (AHB, core, mem, DMA) - 72 MHz
+  * SYSTIMCLK (System timer) - 72/8 = 9 MHz
+  * FCLK - 72 MHz
 
 ## APB1
 
-  * PCLK1 (APB1 periph) - 24 MHz
+  * PCLK1 (APB1 periph) - 36 MHz
 
 ## APB2
 
-  * PCLK2 (APB2 periph) - 48 MHz
-  * ADCCLK - 48/8 = 6 MHz
+  * PCLK2 (APB2 periph) - 72 MHz
+  * ADCCLK - 72/8 = 9 MHz

@@ -3,16 +3,30 @@
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/systick.h>
 
+#include <libopencm3/stm32/rcc.h>
+
 #include <stddef.h> // for NULL
 
 enum {
-    SYSTICK_CLOCK = 6000000,
     SYSTICK_DEFAULT_FREQ_HZ = 1000,
     SYSTICK_HANDLERS_COUNT = 8,
 };
 
 static uint32_t m_freq_hz = SYSTICK_DEFAULT_FREQ_HZ;
 static fwapp_systick_cb m_callbacks[SYSTICK_HANDLERS_COUNT] = {0};
+
+static uint32_t fwapp_systick_calculate_reload_value(uint8_t clock_source)
+{
+    // SYSTICK_CLOCK/reload_value = freq_hz overflows per second - every 1/freq_hz
+    // second one interrupt.
+    // SysTick interrupt every N clock pulses: set reload to N-1.
+
+    extern const struct rcc_clock_scale g_fwapp_rcc_hse_config;
+    const uint8_t divisor = (clock_source == STK_CSR_CLKSOURCE_AHB_DIV8) ? 8 : 1;
+    const uint32_t tick_clock = g_fwapp_rcc_hse_config.ahb_frequency / divisor;
+    const uint32_t reload_value = (tick_clock / (float)m_freq_hz) - 1;
+    return reload_value;
+}
 
 void sys_tick_handler(void)
 {
@@ -53,15 +67,10 @@ void fwapp_systick_start(uint32_t freq_hz)
 {
     m_freq_hz = freq_hz;
 
-    // 48MHz / 8 => 6000000 counts per second.
+    const uint8_t clock_source = STK_CSR_CLKSOURCE_AHB_DIV8;
+    systick_set_clocksource(clock_source);
 
-    systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
-
-    // SYSTICK_CLOCK/reload_value = freq_hz overflows per second - every 1/freq_hz
-    // second one interrupt.
-    // SysTick interrupt every N clock pulses: set reload to N-1.
-
-    const uint32_t reload_value = (SYSTICK_CLOCK / (float)m_freq_hz) - 1;
+    const uint32_t reload_value = fwapp_systick_calculate_reload_value(clock_source);
     systick_set_reload(reload_value);
 
     systick_interrupt_enable();
