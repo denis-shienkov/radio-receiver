@@ -19,16 +19,18 @@ enum uac_stream_status {
 
 static bool toggled = false;
 
-#define WAVEFORM_SAMPLES (USB_AUDIO_SAMPLE_RATE * USB_AUDIO_CHANNELS_NUMBER / 1000)
+#define SINE_SAMPLES_FOR_SOF (USB_AUDIO_SAMPLE_RATE * USB_AUDIO_CHANNELS_NUMBER / 1000)
 // Samples interleaved L,R,L,R ==> actually samples/2 'time' samples.
-int16_t waveform_data_pos[WAVEFORM_SAMPLES] = {0};
-int16_t waveform_data_neg[WAVEFORM_SAMPLES] = {0};
+int16_t waveform_data_pos[SINE_SAMPLES_FOR_SOF] = {0};
+int16_t waveform_data_neg[SINE_SAMPLES_FOR_SOF] = {0};
 
 static void init_waveform_data(void)
 {
+    const int sine_samples_for_single_channel = SINE_SAMPLES_FOR_SOF / USB_AUDIO_CHANNELS_NUMBER;
+    const float deg_step = 90.0 / sine_samples_for_single_channel;
     // Just transmit a boring sawtooth waveform on both channels.
-    for (int i = 0; i != WAVEFORM_SAMPLES/2; ++i) {
-        float deg = i * 11.25 * 1;
+    for (int i = 0; i != sine_samples_for_single_channel; ++i) {
+        float deg = i * deg_step * USB_AUDIO_CHANNELS_NUMBER;
         float rad = deg * 3.1415 / 180.0;
         float d = sin(rad) * 8196;
         waveform_data_pos[i*2] = d;
@@ -376,7 +378,10 @@ static void fwapp_uac_stream_cb(usbd_device *dev, uint8_t ep)
 {
     (void)ep;
 
-    usbd_ep_write_packet(dev, USB_AUDIO_EP_IN_ADDRESS, toggled ? waveform_data_pos : waveform_data_neg, WAVEFORM_SAMPLES*2);
+    usbd_ep_write_packet(dev, USB_AUDIO_EP_IN_ADDRESS,
+                         toggled ? waveform_data_pos
+                                 : waveform_data_neg,
+                         SINE_SAMPLES_FOR_SOF * USB_AUDIO_CHANNELS_NUMBER);
     toggled = !toggled;
 }
 
@@ -389,7 +394,7 @@ void fwapp_uac_setup(usbd_device *dev)
         dev,
         USB_AUDIO_EP_IN_ADDRESS,
         USB_ENDPOINT_ATTR_ISOCHRONOUS,
-        WAVEFORM_SAMPLES*2,
+        SINE_SAMPLES_FOR_SOF * USB_AUDIO_CHANNELS_NUMBER,
         fwapp_uac_stream_cb);
 
     usbd_register_control_callback(
