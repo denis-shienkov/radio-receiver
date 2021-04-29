@@ -27,10 +27,10 @@ int16_t waveform_data_neg[SINE_SAMPLES_FOR_SOF] = {0};
 static void init_waveform_data(void)
 {
     const int sine_samples_for_single_channel = SINE_SAMPLES_FOR_SOF / USB_AUDIO_CHANNELS_NUMBER;
-    const float deg_step = 90.0 / sine_samples_for_single_channel;
+    const float deg_step = 180.0 / sine_samples_for_single_channel;
     // Just transmit a boring sawtooth waveform on both channels.
     for (int i = 0; i != sine_samples_for_single_channel; ++i) {
-        float deg = i * deg_step * USB_AUDIO_CHANNELS_NUMBER;
+        float deg = i * deg_step;
         float rad = deg * 3.1415 / 180.0;
         float d = sin(rad) * 8196;
         waveform_data_pos[i*2] = d;
@@ -169,7 +169,7 @@ static const struct usb_audio_stream_audio_endpoint_descriptor m_uac_cs_ep_dscs[
         .bDescriptorType = USB_AUDIO_DT_CS_ENDPOINT,
         .bDescriptorSubtype = EP_GENERAL,
         .bmAttributes = 0,
-        .bLockDelayUnits = DECODED_PCM_SAMPLES,
+        .bLockDelayUnits = 0,
         .wLockDelay = 0x0000
     }
 };
@@ -179,7 +179,7 @@ static const struct usb_endpoint_descriptor m_uac_stream_endpoints[USB_AUDIO_EP_
         .bLength = USB_DT_ENDPOINT_SIZE,
         .bDescriptorType = USB_DT_ENDPOINT,
         .bEndpointAddress = USB_AUDIO_EP_IN_ADDRESS,
-        .bmAttributes = USB_ENDPOINT_ATTR_ASYNC | USB_ENDPOINT_ATTR_ISOCHRONOUS,
+        .bmAttributes = USB_ENDPOINT_ATTR_ISOCHRONOUS,
         .wMaxPacketSize = USB_AUDIO_EP_LENGTH,
         .bInterval = USB_AUDIO_EP_POLL_INTERVAL,
 
@@ -381,7 +381,7 @@ static void fwapp_uac_stream_cb(usbd_device *dev, uint8_t ep)
     usbd_ep_write_packet(dev, USB_AUDIO_EP_IN_ADDRESS,
                          toggled ? waveform_data_pos
                                  : waveform_data_neg,
-                         SINE_SAMPLES_FOR_SOF * USB_AUDIO_CHANNELS_NUMBER);
+                         sizeof(waveform_data_pos));
     toggled = !toggled;
 }
 
@@ -394,7 +394,7 @@ void fwapp_uac_setup(usbd_device *dev)
         dev,
         USB_AUDIO_EP_IN_ADDRESS,
         USB_ENDPOINT_ATTR_ISOCHRONOUS,
-        SINE_SAMPLES_FOR_SOF * USB_AUDIO_CHANNELS_NUMBER,
+        sizeof(waveform_data_pos),
         fwapp_uac_stream_cb);
 
     usbd_register_control_callback(
