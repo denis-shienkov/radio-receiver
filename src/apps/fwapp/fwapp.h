@@ -91,7 +91,7 @@
 #define USB_AUDIO_LEFT_CHANNEL_IDX      1
 #define USB_AUDIO_RIGHT_CHANNEL_IDX     2
 // USB audio sample rate, in Hz.
-#define USB_AUDIO_SAMPLE_RATE           16000
+#define USB_AUDIO_SAMPLE_RATE           22050
 // USB audio sub-frame size (two bytes per audio subframe).
 #define USB_AUDIO_SUB_FRAME_SIZE        2
 // USB audio bit resolution (16-bits per sample).
@@ -136,7 +136,5 @@
 // USB audio muted value.
 #define SET_MUTED                       1
 #define MUTED_LENGTH                    1
-// USB audio units.
-#define DECODED_PCM_SAMPLES             2
 
 #endif // FWAPP_CFG_H
