@@ -60,8 +60,8 @@
 #define USB_HID_EP_COUNT                2
 #define USB_HID_EP_IN_ADDRESS           0x81
 #define USB_HID_EP_OUT_ADDRESS          0x01
-// USB HID endpoint buffer size.
-#define USB_HID_EP_LENGTH               64
+// USB HID endpoint buffer siz (should be more thatn HID report size).
+#define USB_HID_EP_LENGTH               40 //
 // USB HID endpoint polling interval.
 #define USB_HID_EP_INTERVAL             0x01
 // USB HID report payload size.
@@ -77,7 +77,7 @@
 #define USB_AUDIO_EP_COUNT              1
 #define USB_AUDIO_EP_IN_ADDRESS         0x82
 // USB audio endpoint buffer size.
-#define USB_AUDIO_EP_LENGTH             256
+#define USB_AUDIO_EP_LENGTH             64 // For 16 kHz sample rate.
 // USB audio endpoint polling interval.
 #define USB_AUDIO_EP_POLL_INTERVAL      0x01
 // USB audio units identifiers.
@@ -91,7 +91,7 @@
 #define USB_AUDIO_LEFT_CHANNEL_IDX      1
 #define USB_AUDIO_RIGHT_CHANNEL_IDX     2
 // USB audio sample rate, in Hz.
-#define USB_AUDIO_SAMPLE_RATE           22050
+#define USB_AUDIO_SAMPLE_RATE           16000
 // USB audio sub-frame size (two bytes per audio subframe).
 #define USB_AUDIO_SUB_FRAME_SIZE        2
 // USB audio bit resolution (16-bits per sample).
