@@ -394,7 +394,7 @@ void fwapp_uac_setup(usbd_device *dev)
         dev,
         USB_AUDIO_EP_IN_ADDRESS,
         USB_ENDPOINT_ATTR_ISOCHRONOUS,
-        sizeof(waveform_data_pos),
+        USB_AUDIO_EP_LENGTH,
         fwapp_uac_stream_cb);
 
     usbd_register_control_callback(
