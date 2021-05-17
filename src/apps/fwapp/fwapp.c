@@ -1,3 +1,5 @@
+#include "fwapp.h"
+#include "fwapp_adc.h"
 #include "fwapp_hid.h"
 #include "fwapp_led.h"
 #include "fwapp_proto.h"
@@ -26,18 +28,28 @@ const struct rcc_clock_scale g_fwapp_rcc_hse_config = {
     .usbpre = RCC_CFGR_USBPRE_PLL_CLK_DIV1_5
 };
 
+void fwapp_delay_cycles(uint32_t cycles_count)
+{
+    for (uint32_t i = 0; i < cycles_count; ++i) {
+        __asm__("nop");
+    }
+}
+
 int main(void)
 {
     rcc_clock_setup_pll(&g_fwapp_rcc_hse_config);
     rcc_periph_clock_enable(RCC_GPIOA);
     rcc_periph_clock_enable(RCC_GPIOC);
     rcc_periph_clock_enable(RCC_USART1);
+    rcc_periph_clock_enable(RCC_TIM2);
+    rcc_periph_clock_enable(RCC_ADC1);
 
     fwapp_trace_start(115200);
     fwapp_led_start(1);
     fwapp_systick_start(1000);
     fwapp_usb_start();
     fwapp_proto_start();
+    fwapp_adc_start(USB_AUDIO_SAMPLE_RATE);
 
     printf("Hello\n");
 
@@ -46,6 +58,7 @@ int main(void)
         fwapp_usb_schedule();
         fwapp_hid_schedule();
         fwapp_proto_schedule();
+        fwapp_adc_schedule();
     }
 
     return 0;

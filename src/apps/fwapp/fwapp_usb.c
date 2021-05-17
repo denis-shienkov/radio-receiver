@@ -7,9 +7,12 @@
 
 #include <stddef.h> // for NULL
 #include <stdio.h> // for printf
+#include <string.h> // for memset
 
 static usbd_device *m_dev = NULL;
 static uint8_t m_control_buffer[USB_CONTROL_BUFFER_LENGTH] = {0};
+
+static fwapp_usb_sof_cb m_sof_cbs[USB_SOF_CALBACKS_COUNT] = {0};
 
 static const struct usb_device_descriptor m_dev_dsc = {
     .bLength = USB_DT_DEVICE_SIZE,
@@ -82,12 +85,11 @@ static void fwapp_usb_reenumerate(void)
     gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
                   GPIO_CNF_OUTPUT_PUSHPULL, GPIO12);
     gpio_clear(GPIOA, GPIO12);
-    for (uint32_t i = 0; i < 800000; ++i) {
-        __asm__("nop");
-    }
+
+    fwapp_delay_cycles(800000);
 }
 
-static void fwapp_usb_set_config_cb(usbd_device *dev, uint16_t wValue)
+static void fwapp_usb_set_config_occurred(usbd_device *dev, uint16_t wValue)
 {
     (void)wValue;
 
@@ -95,14 +97,17 @@ static void fwapp_usb_set_config_cb(usbd_device *dev, uint16_t wValue)
     fwapp_uac_setup(dev);
 }
 
-static void fwapp_usb_set_altsetting_cb(usbd_device *dev, uint16_t wIndex, uint16_t wValue)
+static void fwapp_usb_set_altsetting_occurred(usbd_device *dev, uint16_t wIndex, uint16_t wValue)
 {
     fwapp_uac_handle_set_altsetting(dev, wIndex, wValue);
 }
 
-static void fwapp_usb_sof_cb(void)
+static void fwapp_usb_sof_occurred(void)
 {
-    fwapp_uac_handle_sof();
+    for (uint8_t i = 0; i < USB_SOF_CALBACKS_COUNT; ++i) {
+        if (m_sof_cbs[i])
+            m_sof_cbs[i]();
+    }
 }
 
 static void fwapp_usb_setup(void)
@@ -118,19 +123,20 @@ static void fwapp_usb_setup(void)
 
     usbd_register_set_config_callback(
         m_dev,
-        fwapp_usb_set_config_cb);
+        fwapp_usb_set_config_occurred);
 
     usbd_register_set_altsetting_callback(
         m_dev,
-        fwapp_usb_set_altsetting_cb);
+        fwapp_usb_set_altsetting_occurred);
 
     usbd_register_sof_callback(
         m_dev,
-        fwapp_usb_sof_cb);
+        fwapp_usb_sof_occurred);
 }
 
 void fwapp_usb_start(void)
 {
+    memset(m_sof_cbs, 0, sizeof(m_sof_cbs));
     fwapp_usb_reenumerate();
     fwapp_usb_setup();
 }
@@ -150,4 +156,19 @@ void fwapp_usb_dump_setup_req(struct usb_setup_data *req)
     printf(" - usb: %02x-%02x-%04x-%04x-%04x\n",
            req->bmRequestType, req->bRequest,
            req->wIndex, req->wLength, req->wValue);
+}
+
+bool fwapp_usb_register_sof_callback(fwapp_usb_sof_cb sof_cb)
+{
+    if (!sof_cb)
+        return false;
+    for (uint8_t i = 0; i < USB_SOF_CALBACKS_COUNT; ++i) {
+        if (m_sof_cbs[i] && (m_sof_cbs[i] == sof_cb))
+            return true;
+        if (!m_sof_cbs[i]) {
+            m_sof_cbs[i] = sof_cb;
+            return true;
+        }
+    }
+    return false;
 }

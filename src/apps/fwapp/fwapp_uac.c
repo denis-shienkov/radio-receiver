@@ -7,7 +7,7 @@
 
 #include <stddef.h> // for NULL
 #include <stdio.h> // for printf
-#include <math.h>
+#include <string.h> // for memset
 
 #define USB_AUDIO_ALL_CHANNELS_NUMBER   (USB_AUDIO_CHANNELS_NUMBER + 1)
 
@@ -17,28 +17,16 @@ enum uac_stream_status {
     UAC_STREAM_ENABLED
 };
 
-static bool toggled = false;
+enum uac_sample_buf_index {
+    UAC_SAMPLE_BUF0 = 0,
+    UAC_SAMPLE_BUF1,
+    UAC_SAMPLE_BUFS_COUNT
+};
 
-#define SINE_SAMPLES_FOR_SOF (USB_AUDIO_SAMPLE_RATE * USB_AUDIO_CHANNELS_NUMBER / 1000)
-// Samples interleaved L,R,L,R ==> actually samples/2 'time' samples.
-int16_t waveform_data_pos[SINE_SAMPLES_FOR_SOF] = {0};
-int16_t waveform_data_neg[SINE_SAMPLES_FOR_SOF] = {0};
+static struct fwapp_uac_buffer m_sample_buffers[UAC_SAMPLE_BUFS_COUNT] = {0};
 
-static void init_waveform_data(void)
-{
-    const int sine_samples_for_single_channel = SINE_SAMPLES_FOR_SOF / USB_AUDIO_CHANNELS_NUMBER;
-    const float deg_step = 180.0 / sine_samples_for_single_channel;
-    // Just transmit a boring sawtooth waveform on both channels.
-    for (int i = 0; i != sine_samples_for_single_channel; ++i) {
-        float deg = i * deg_step;
-        float rad = deg * 3.1415 / 180.0;
-        float d = sin(rad) * 8196;
-        waveform_data_pos[i*2] = d;
-        waveform_data_pos[i*2+1] = d;
-        waveform_data_neg[i*2] = -d;
-        waveform_data_neg[i*2+1] = -d;
-    }
-}
+static enum uac_sample_buf_index m_sample_buf_index = UAC_SAMPLE_BUF0;
+static fwapp_uac_set_buffer_cb m_set_buf_cb = NULL;
 
 static usbd_device *m_dev = NULL;
 uint8_t g_uac_stream_iface_cur_altsetting = 0;
@@ -53,6 +41,19 @@ static struct usb_audio_ch_cfg {
     {SET_MUTED}, // Left channel.
     {SET_MUTED}  // Right channel.
 };
+
+static void fwapp_uac_sof_cb(void)
+{
+    if (m_uac_stream_status != UAC_STREAM_ENABLED)
+        return;
+    if (!m_set_buf_cb)
+        return;
+    struct fwapp_uac_buffer *buf = &m_sample_buffers[m_sample_buf_index];
+    // Toggle sample buffer index.
+    m_sample_buf_index = (m_sample_buf_index == UAC_SAMPLE_BUF0) ? UAC_SAMPLE_BUF1
+                                                                 : UAC_SAMPLE_BUF0;
+    m_set_buf_cb(buf);
+}
 
 // Association interface configuration.
 
@@ -273,6 +274,12 @@ static void fwapp_uac_set_stream_status(enum uac_stream_status status)
 {
     m_uac_stream_status = status;
     printf("uac: set stream status %u\n", m_uac_stream_status);
+
+    if (m_uac_stream_status == UAC_STREAM_ENABLED) {
+        m_sample_buf_index = UAC_SAMPLE_BUF0;
+        for (uint8_t i = UAC_SAMPLE_BUF0; i < UAC_SAMPLE_BUFS_COUNT; ++i)
+            memset(m_sample_buffers[i].samples, 0, sizeof(m_sample_buffers[i].samples));
+    }
 }
 
 static enum usbd_request_return_codes fwapp_uac_handle_mute_selector(
@@ -378,17 +385,17 @@ static void fwapp_uac_stream_cb(usbd_device *dev, uint8_t ep)
 {
     (void)ep;
 
-    usbd_ep_write_packet(dev, USB_AUDIO_EP_IN_ADDRESS,
-                         toggled ? waveform_data_pos
-                                 : waveform_data_neg,
-                         sizeof(waveform_data_pos));
-    toggled = !toggled;
+    const struct fwapp_uac_buffer *buf = &m_sample_buffers[m_sample_buf_index];
+
+    usbd_ep_write_packet(dev, USB_AUDIO_EP_IN_ADDRESS, buf->samples,
+                         sizeof(buf->samples));
 }
 
 void fwapp_uac_setup(usbd_device *dev)
 {
     m_dev = dev;
-    init_waveform_data();
+
+    fwapp_usb_register_sof_callback(fwapp_uac_sof_cb);
 
     usbd_ep_setup(
         dev,
@@ -420,9 +427,10 @@ void fwapp_uac_handle_set_altsetting(usbd_device *dev, uint16_t iface_idx, uint1
     if (alt_setting == USB_AUDIO_STREAM_ALT_SETTING_PASSIVE)
         fwapp_uac_set_stream_status(UAC_STREAM_DISABLED);
     else if (alt_setting == USB_AUDIO_STREAM_ALT_SETTING_ACTIVE)
-        fwapp_uac_set_stream_status(UAC_STREAM_IDLE);
+        fwapp_uac_set_stream_status(UAC_STREAM_ENABLED);
 }
 
-void fwapp_uac_handle_sof(void)
+void fwapp_uac_register_set_buffer_callback(fwapp_uac_set_buffer_cb prep_buf_cb)
 {
+    m_set_buf_cb = prep_buf_cb;
 }

@@ -1,6 +1,8 @@
 #ifndef FWAPP_CFG_H
 #define FWAPP_CFG_H
 
+#include <stdint.h>
+
 //
 // Common USB configuration.
 //
@@ -46,6 +48,8 @@
 // This needs to be big enough to hold any descriptor,
 // the largest of which will be the configuration descriptor.
 #define USB_CONTROL_BUFFER_LENGTH       512
+
+#define USB_SOF_CALBACKS_COUNT          4
 
 #define get_byte_hi(word)        (word >> 8)
 #define get_byte_lo(word)        (word & 0xFF)
@@ -136,5 +140,7 @@
 // USB audio muted value.
 #define SET_MUTED                       1
 #define MUTED_LENGTH                    1
+
+void fwapp_delay_cycles(uint32_t cycles_count);
 
 #endif // FWAPP_CFG_H
