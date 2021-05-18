@@ -22,51 +22,74 @@
 
 extern const struct rcc_clock_scale g_fwapp_rcc_hse_config;
 
+#define ADC_MEASUREMENTS_FOR_SAMPLE 4
+
 static volatile bool m_data_ready = false;
 static uint32_t m_period = 0;
-static struct fwapp_uac_buffer *m_uac_buf = NULL;
-static uint8_t m_uac_sample_pos = 0;
+static struct fwapp_uac_buffer *m_samples_buf = NULL;
+static uint8_t m_sample_pos = 0;
+
+static uint16_t m_left_meass[ADC_MEASUREMENTS_FOR_SAMPLE] = {0};
+static uint16_t m_right_meass[ADC_MEASUREMENTS_FOR_SAMPLE] = {0};
+static uint8_t m_meas_pos = 0;
 
 static void fwapp_adc_restart_timer(void)
 {
-    timer_disable_counter(TIM2);
+    //timer_disable_counter(TIM2);
     timer_set_counter(TIM2, m_period);
     timer_enable_counter(TIM2);
 }
 
 static void fwapp_adc_set_uac_buffer_cb(struct fwapp_uac_buffer *uac_buf)
 {
-    m_uac_buf = uac_buf;
-    m_uac_sample_pos = 0;
+    m_samples_buf = uac_buf;
+    m_sample_pos = 0;
 
     fwapp_adc_restart_timer();
     gpio_toggle(TEST_PORT, TEST_PIN_SOF);
 }
 
-static void fwapp_adc_add_sample(void)
+static uint16_t fwapp_adc_calc_average_sample(const uint16_t *meass)
 {
-    if (!m_uac_buf)
+    uint32_t average = 0;
+    for (uint8_t i = 0; i < ADC_MEASUREMENTS_FOR_SAMPLE; ++i)
+        average += meass[i];
+    return average / ADC_MEASUREMENTS_FOR_SAMPLE;
+}
+
+static void fwapp_adc_add_average_sample(void)
+{
+    if (!m_samples_buf)
         return;
 
-    if (m_uac_sample_pos < (sizeof(m_uac_buf->samples) / USB_AUDIO_SUB_FRAME_SIZE)) {
-        gpio_toggle(TEST_PORT, TEST_PIN_READY);
+    const uint32_t channel_samples = (sizeof(m_samples_buf->samples) / sizeof(m_samples_buf->samples[0])) / USB_AUDIO_CHANNELS_NUMBER;
+    if (m_sample_pos < channel_samples) {
+        //gpio_toggle(TEST_PORT, TEST_PIN_READY);
 
-        uint16_t left = adc_read_injected(ADC1, 1);
-        uint16_t right = adc_read_injected(ADC1, 2);
-
-        uint8_t *out_left = m_uac_buf->samples
-                            + (m_uac_sample_pos
-                               * USB_AUDIO_SUB_FRAME_SIZE
-                               * USB_AUDIO_CHANNELS_NUMBER);
-
-        uint8_t *out_right = out_left + USB_AUDIO_SUB_FRAME_SIZE;
-
-        memcpy(out_left, &left, sizeof(left));
-        memcpy(out_right, &right, sizeof(right));
-
-        ++m_uac_sample_pos;
+        const uint16_t left = fwapp_adc_calc_average_sample(m_left_meass);
+        const uint16_t right = fwapp_adc_calc_average_sample(m_right_meass);
+        m_samples_buf->samples[m_sample_pos * USB_AUDIO_CHANNELS_NUMBER] = left;
+        m_samples_buf->samples[m_sample_pos * USB_AUDIO_CHANNELS_NUMBER + 1] = right;
+        ++m_sample_pos;
     } else {
         timer_disable_counter(TIM2);
+    }
+}
+
+static void fwapp_adc_add_measurement(void)
+{
+    gpio_toggle(TEST_PORT, TEST_PIN_READY);
+
+    if (m_meas_pos < ADC_MEASUREMENTS_FOR_SAMPLE) {
+        m_left_meass[m_meas_pos] = adc_read_injected(ADC1, 1);
+        m_right_meass[m_meas_pos] = adc_read_injected(ADC1, 2);
+        ++m_meas_pos;
+    }
+    if (m_meas_pos < ADC_MEASUREMENTS_FOR_SAMPLE) {
+        // Do nothing.
+    } else {
+        m_meas_pos = 0;
+        fwapp_adc_add_average_sample();
     }
 }
 
@@ -76,7 +99,7 @@ void adc1_2_isr(void)
     m_data_ready = true;
 }
 
-void fwapp_adc_start(uint32_t freq_hz)
+void fwapp_adc_start(void)
 {
     // Configure test pin.
     gpio_set_mode(TEST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
@@ -85,13 +108,17 @@ void fwapp_adc_start(uint32_t freq_hz)
                   GPIO_CNF_OUTPUT_PUSHPULL, TEST_PIN_READY);
 
     fwapp_uac_register_set_buffer_callback(fwapp_adc_set_uac_buffer_cb);
+    m_sample_pos = 0;
+    m_meas_pos = 0;
 
     // Configure timer.
 
+    const uint32_t sampling_rate = ADC_MEASUREMENTS_FOR_SAMPLE * USB_AUDIO_SAMPLE_RATE;
+
     // TIM2 on APB1 is running at double frequency (it is 72 MHz).
     const uint32_t timer_clock = g_fwapp_rcc_hse_config.apb1_frequency * 2;
-    const uint32_t divider = timer_clock / freq_hz;
-    const uint32_t prescaler = divider / 10;
+    const uint32_t divider = timer_clock / sampling_rate;
+    const uint32_t prescaler = divider / 5;
     m_period = (divider / prescaler) - 1;
     rcc_periph_reset_pulse(RST_TIM2);
     timer_set_mode(TIM2, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
@@ -137,6 +164,6 @@ void fwapp_adc_schedule(void)
 {
     if (m_data_ready) {
         m_data_ready = false;
-        fwapp_adc_add_sample();
+        fwapp_adc_add_measurement();
     }
 }

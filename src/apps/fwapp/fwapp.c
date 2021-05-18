@@ -49,7 +49,7 @@ int main(void)
     fwapp_systick_start(1000);
     fwapp_usb_start();
     fwapp_proto_start();
-    fwapp_adc_start(USB_AUDIO_SAMPLE_RATE);
+    fwapp_adc_start();
 
     printf("Hello\n");
 

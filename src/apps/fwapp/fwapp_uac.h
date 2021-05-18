@@ -14,7 +14,7 @@ extern uint8_t g_uac_stream_iface_cur_altsetting;
 
 struct fwapp_uac_buffer {
     // Samples for two interleaved channels.
-    uint8_t samples[SINE_SAMPLES_FOR_SOF * USB_AUDIO_SUB_FRAME_SIZE];
+    uint16_t samples[SINE_SAMPLES_FOR_SOF];
 };
 
 typedef void (*fwapp_uac_set_buffer_cb)(struct fwapp_uac_buffer *buf);
