@@ -16,10 +16,6 @@
 #define ADC_PIN_LIN     GPIO0
 #define ADC_PIN_RIN     GPIO1
 
-#define TEST_PORT       GPIOA
-#define TEST_PIN_SOF    GPIO6
-#define TEST_PIN_READY  GPIO7
-
 extern const struct rcc_clock_scale g_fwapp_rcc_hse_config;
 
 #define ADC_MEASUREMENTS_FOR_SAMPLE 4
@@ -46,7 +42,6 @@ static void fwapp_adc_set_uac_buffer_cb(struct fwapp_uac_buffer *uac_buf)
     m_sample_pos = 0;
 
     fwapp_adc_restart_timer();
-    gpio_toggle(TEST_PORT, TEST_PIN_SOF);
 }
 
 static uint16_t fwapp_adc_calc_average_sample(const uint16_t *meass)
@@ -64,8 +59,6 @@ static void fwapp_adc_add_average_sample(void)
 
     const uint32_t channel_samples = (sizeof(m_samples_buf->samples) / sizeof(m_samples_buf->samples[0])) / USB_AUDIO_CHANNELS_NUMBER;
     if (m_sample_pos < channel_samples) {
-        //gpio_toggle(TEST_PORT, TEST_PIN_READY);
-
         const uint16_t left = fwapp_adc_calc_average_sample(m_left_meass);
         const uint16_t right = fwapp_adc_calc_average_sample(m_right_meass);
         m_samples_buf->samples[m_sample_pos * USB_AUDIO_CHANNELS_NUMBER] = left;
@@ -78,8 +71,6 @@ static void fwapp_adc_add_average_sample(void)
 
 static void fwapp_adc_add_measurement(void)
 {
-    gpio_toggle(TEST_PORT, TEST_PIN_READY);
-
     if (m_meas_pos < ADC_MEASUREMENTS_FOR_SAMPLE) {
         m_left_meass[m_meas_pos] = adc_read_injected(ADC1, 1);
         m_right_meass[m_meas_pos] = adc_read_injected(ADC1, 2);
@@ -101,12 +92,6 @@ void adc1_2_isr(void)
 
 void fwapp_adc_start(void)
 {
-    // Configure test pin.
-    gpio_set_mode(TEST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
-                  GPIO_CNF_OUTPUT_PUSHPULL, TEST_PIN_SOF);
-    gpio_set_mode(TEST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
-                  GPIO_CNF_OUTPUT_PUSHPULL, TEST_PIN_READY);
-
     fwapp_uac_register_set_buffer_callback(fwapp_adc_set_uac_buffer_cb);
     m_sample_pos = 0;
     m_meas_pos = 0;
