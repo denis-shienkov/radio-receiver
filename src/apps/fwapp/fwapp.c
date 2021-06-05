@@ -40,7 +40,7 @@ int main(void)
     rcc_clock_setup_pll(&g_fwapp_rcc_hse_config);
     rcc_periph_clock_enable(RCC_GPIOA);
     rcc_periph_clock_enable(RCC_GPIOC);
-    rcc_periph_clock_enable(RCC_USART1);
+    rcc_periph_clock_enable(RCC_USART2);
     rcc_periph_clock_enable(RCC_TIM2);
     rcc_periph_clock_enable(RCC_ADC1);
 
