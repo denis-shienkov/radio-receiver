@@ -20,34 +20,22 @@ Project {
 
         property path generatedPath: buildDirectory + "/generated"
         property path includeBase: project.libopencm3SourcesPath + "/include"
-        property string defineBase: LIBOPENCM3.targetDefine(project.targetMcu)
+        property stringList compilerFlags: LIBOPENCM3.compilerFlags(project.targetMcu)
+        property stringList targetDefines: LIBOPENCM3.targetDefines(project.targetMcu)
+        property stringList targetFlags: LIBOPENCM3.targetFlags(project.targetMcu)
+        property stringList targetIncludes: [
+            generatedPath + "/libopencm3/stm32",
+            generatedPath,
+            project.libopencm3SourcesPath + "/include",
+        ]
 
         Depends { name: "cpp" }
         cpp.cLanguageVersion: "c99"
         cpp.positionIndependentCode: false
         cpp.includePaths: [product.includeBase]
-
-        cpp.commonCompilerFlags: [
-            "-Wextra",
-            "-Wimplicit-function-declaration",
-            "-Wmissing-prototypes",
-            "-Wredundant-decls",
-            "-Wshadow",
-            "-Wstrict-prototypes",
-            "-Wundef",
-        ]
-
-        Properties {
-            condition: project.targetMcu === "stm32f1"
-            cpp.driverFlags: [
-                "-fdata-sections",
-                "-ffunction-sections",
-                "-fno-common",
-                "-mcpu=cortex-m3",
-                "-mthumb",
-            ]
-            cpp.defines: [defineBase]
-        }
+        cpp.driverFlags: product.targetFlags
+        cpp.defines: product.targetDefines
+        cpp.commonCompilerFlags: product.compilerFlags
 
         Group {
             name: "JSON descriptors"
@@ -71,85 +59,40 @@ Project {
             name: "Cm3 nvic"
             prefix: project.libopencm3SourcesPath + "/lib/cm3/"
             files: ["nvic.c"]
-            cpp.includePaths: [
-                product.generatedPath,
-                project.libopencm3SourcesPath + "/include",
-            ]
+            cpp.includePaths: product.targetIncludes
         }
 
         Group {
             name: "Cm3 vector"
             prefix: project.libopencm3SourcesPath + "/lib/cm3/"
             files: ["vector.c"]
-            cpp.includePaths: [
-                product.generatedPath + "/libopencm3/stm32",
-                product.generatedPath,
-                project.libopencm3SourcesPath + "/include",
-            ]
+            cpp.includePaths: product.targetIncludes
         }
 
         Group {
-            condition: project.targetMcu === "stm32f1"
             name: "Specific for " + project.targetMcu
-            prefix: project.libopencm3SourcesPath + "/lib/stm32/f1/"
+            prefix: project.libopencm3SourcesPath + "/lib/" + LIBOPENCM3.targetSubPath(project.targetMcu) + "/"
+            excludeFiles: ["vector_chipset.c"]
             files: ["*.c"]
+            cpp.includePaths: product.targetIncludes
         }
 
         Group {
-            condition: project.targetMcu === "stm32f1"
             name: "Common for " + project.targetMcu
             prefix: project.libopencm3SourcesPath + "/lib/stm32/common/"
-            files: [
-                "adc_common_v1.c",
-                "crc_common_all.c",
-                "dac_common_all.c",
-                "dac_common_v1.c",
-                "desig_common_all.c",
-                "desig_common_v1.c",
-                "dma_common_l1f013.c",
-                "exti_common_all.c",
-                "flash_common_all.c",
-                "flash_common_f.c",
-                "flash_common_f01.c",
-                "gpio_common_all.c",
-                "i2c_common_v1.c",
-                "iwdg_common_all.c",
-                "pwr_common_v1.c",
-                "rcc_common_all.c",
-                "spi_common_all.c",
-                "spi_common_v1.c",
-                "st_usbfs_core.c",
-                "timer_common_all.c",
-                "usart_common_all.c",
-                "usart_common_f124.c",
-            ]
+            files: LIBOPENCM3.commonSources(project.targetMcu)
         }
 
         Group {
-            condition: project.targetMcu === "stm32f1"
             name: "Base for " + project.targetMcu
             prefix: project.libopencm3SourcesPath + "/lib/stm32/"
-            files: [
-                "can.c",
-                "st_usbfs_v1.c",
-            ]
+            files: LIBOPENCM3.baseSources(project.targetMcu)
         }
 
         Group {
             name: "Common Usb"
             prefix: project.libopencm3SourcesPath + "/lib/usb/"
-            files: [
-                "usb.c",
-                "usb_audio.c",
-                "usb_cdc.c",
-                "usb_control.c",
-                "usb_dwc_common.c",
-                "usb_f107.c",
-                "usb_hid.c",
-                "usb_midi.c",
-                "usb_msc.c",
-                "usb_standard.c",
-            ]
+            files: LIBOPENCM3.usbSources(project.targetMcu)
         }
 
         Rule {
@@ -162,8 +105,12 @@ Project {
 
         Export {
             Depends { name: "cpp" }
-            cpp.includePaths: [product.includeBase, product.generatedPath]
-            cpp.defines: [product.defineBase]
+            cpp.includePaths: [exportingProduct.includeBase, exportingProduct.generatedPath]
+            cpp.defines: exportingProduct.targetDefines
+            cpp.driverFlags: exportingProduct.targetFlags
+            cpp.commonCompilerFlags: exportingProduct.compilerFlags
+            cpp.cLanguageVersion: "c99"
+            cpp.positionIndependentCode: false
         }
     }
 }

@@ -13,17 +13,30 @@ function submoduleExists(project) {
 }
 
 function targetSubPath(targetMcu) {
-    if (targetMcu === "stm32f0")
-        return "stm32/f0";
-    else if (targetMcu === "stm32f1")
+    if (targetMcu === "stm32f1")
         return "stm32/f1";
+    else if (targetMcu === "stm32f4")
+        return "stm32/f4";
 }
 
-function targetDefine(targetMcu) {
-    if (targetMcu === "stm32f0")
-        return "STM32F0";
-    else if (targetMcu === "stm32f1")
-        return "STM32F1";
+function targetDefines(targetMcu) {
+    if (targetMcu === "stm32f1")
+        return ["STM32F1"];
+    else if (targetMcu === "stm32f4")
+        return ["STM32F4"];
+}
+
+function targetFlags(targetMcu) {
+    var flags = ["-fdata-sections", "-ffunction-sections", "-fno-common", "-mthumb"];
+    if (targetMcu === "stm32f1")
+        return flags.concat("-mcpu=cortex-m3", "-mfix-cortex-m3-ldrd", "-msoft-float");
+    else if (targetMcu === "stm32f4")
+        return flags.concat("-mcpu=cortex-m4", "-mfloat-abi=hard", "-mfpu=fpv4-sp-d16");
+}
+
+function compilerFlags(targetMcu) {
+    return ["-Wextra", "-Wimplicit-function-declaration", "-Wmissing-prototypes",
+            "-Wredundant-decls", "-Wshadow", "-Wstrict-prototypes", "-Wundef"]
 }
 
 function libopencm3SubPath(targetMcu) {
@@ -34,18 +47,54 @@ function libopencmsisSubPath(targetMcu) {
     return FileInfo.joinPaths("libopencmsis", targetSubPath(targetMcu));
 }
 
+function commonSources(targetMcu) {
+    var sources = ["crc_common_all.c", "dac_common_all.c", "desig_common_all.c", "desig_common_v1.c",
+                   "exti_common_all.c", "flash_common_all.c", "gpio_common_all.c", "iwdg_common_all.c",
+                   "rcc_common_all.c", "spi_common_all.c",  "timer_common_all.c", "usart_common_all.c"];
+    if (targetMcu === "stm32f1")
+        return sources.concat("adc_common_v1.c", "dac_common_v1.c", "dma_common_l1f013.c",
+                              "flash_common_f.c", "flash_common_f01.c", "i2c_common_v1.c",
+                              "pwr_common_v1.c", "spi_common_v1.c", "st_usbfs_core.c",
+                              "usart_common_f124.c");
+    else if (targetMcu === "stm32f4")
+        return sources.concat("adc_common_f47.c", "adc_common_v1.c", "adc_common_v1_multi.c",
+                              "crypto_common_f24.c", "dac_common_v1.c", "dcmi_common_f47.c",
+                              "dma2d_common_f47.c", "dma_common_f24.c", "dsi_common_f47.c",
+                              "flash_common_f.c", "flash_common_f24.c", "flash_common_idcache.c",
+                              "fmc_common_f47.c", "gpio_common_f0234.c", "hash_common_f24.c",
+                              "i2c_common_v1.c", "lptimer_common_all.c", "ltdc_common_f47.c",
+                              "pwr_common_v1.c", "quadspi_common_v1.c", "rng_common_v1.c",
+                              "rtc_common_l1f024.c", "spi_common_v1.c", "spi_common_v1_frf.c",
+                              "timer_common_f0234.c", "timer_common_f24.c", "usart_common_f124.c");
+}
+
+function baseSources(targetMcu) {
+    var sources = ["can.c"];
+    if (targetMcu === "stm32f1")
+        return sources.concat("st_usbfs_v1.c");
+    else if (targetMcu === "stm32f4")
+        return sources;
+}
+
+function usbSources(targetMcu) {
+    var sources = ["usb.c", "usb_audio.c", "usb_cdc.c", "usb_control.c", "usb_dwc_common.c",
+                   "usb_hid.c", "usb_midi.c", "usb_msc.c", "usb_standard.c"];
+    if (targetMcu === "stm32f1")
+        return sources.concat("usb_f107.c");
+    else if (targetMcu === "stm32f4")
+        return sources.concat("usb_f107.c", "usb_f207.c");
+}
+
 function findJsonFile(project) {
     var cm3SubPath = libopencm3SubPath(project.targetMcu);
-    if (project.targetMcu === "stm32f0")
-        return FileInfo.joinPaths(project.libopencm3SourcesPath, "include", cm3SubPath, "irq.json");
-    else if (project.targetMcu === "stm32f1")
-        return FileInfo.joinPaths(project.libopencm3SourcesPath, "include", cm3SubPath, "irq.json");
+    return FileInfo.joinPaths(project.libopencm3SourcesPath, "include", cm3SubPath, "irq.json");
 }
 
 function nvicGeneratorOutputArtifacts(project, product) {
     console.error("GP: " + product.generatedPath)
     var cm3SubPath = libopencm3SubPath(project.targetMcu);
     var cmsisSubPath = libopencmsisSubPath(project.targetMcu);
+    var tgtSubPath = targetSubPath(project.targetMcu);
     return [{
                 fileTags: ["hpp", "nvic_hpp"],
                 filePath: FileInfo.joinPaths(product.generatedPath, cm3SubPath, "nvic.h"),
@@ -56,7 +105,7 @@ function nvicGeneratorOutputArtifacts(project, product) {
             },
             {
                 fileTags: ["hpp", "nvic_cpp"],
-                filePath: FileInfo.joinPaths(product.generatedPath, "libopencm3/stm32/f1/vector_nvic.c")
+                filePath: FileInfo.joinPaths(product.generatedPath, "libopencm3/" + tgtSubPath +"/vector_nvic.c")
             }];
 }
 
