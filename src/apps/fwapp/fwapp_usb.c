@@ -4,6 +4,7 @@
 #include "fwapp_usb.h"
 
 #include <libopencm3/stm32/gpio.h>
+#include <libopencm3/usb/dwc/otg_fs.h>
 
 #include <stddef.h> // for NULL
 #include <stdio.h> // for printf
@@ -82,11 +83,11 @@ static void fwapp_usb_reenumerate(void)
     // The magic delay is somewhat arbitrary, no guarantees on USBIF
     // compliance here, but "it works" in most places.
 
-    gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-                  GPIO_CNF_OUTPUT_PUSHPULL, GPIO12);
-    gpio_clear(GPIOA, GPIO12);
+//    gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
+//                  GPIO_CNF_OUTPUT_PUSHPULL, GPIO12);
+//    gpio_clear(GPIOA, GPIO12);
 
-    fwapp_delay_cycles(800000);
+//    fwapp_delay_cycles(800000);
 }
 
 static void fwapp_usb_set_config_occurred(usbd_device *dev, uint16_t wValue)
@@ -112,14 +113,19 @@ static void fwapp_usb_sof_occurred(void)
 
 static void fwapp_usb_setup(void)
 {
+    gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO11 | GPIO12);
+    gpio_set_af(GPIOA, GPIO_AF10, GPIO11 | GPIO12);
+
     m_dev = usbd_init(
-        &st_usbfs_v1_usb_driver,
+        &otgfs_usb_driver,
         &m_dev_dsc,
         &m_config_dsc,
         m_strings,
         USB_STRINGS_NUMBER,
         m_control_buffer,
         sizeof(m_control_buffer));
+
+    OTG_FS_GCCFG |= OTG_GCCFG_VBDEN | OTG_GCCFG_PWRDWN;
 
     usbd_register_set_config_callback(
         m_dev,

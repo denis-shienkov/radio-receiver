@@ -12,7 +12,7 @@ static uint32_t m_freq_hz = 1;
 static void fwapp_led_reload_counter(void)
 {
     const uint32_t systic_freq = fwapp_systick_get_freq_hz();
-    m_counter = systic_freq / m_freq_hz;
+    m_counter = systic_freq / m_freq_hz / 2;
 }
 
 static void fwapp_led_decrement_counter_cb(uint32_t freq_hz)
@@ -27,8 +27,7 @@ void fwapp_led_start(uint32_t freq_hz)
     m_freq_hz = freq_hz;
     fwapp_led_reload_counter();
 
-    gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ,
-                  GPIO_CNF_OUTPUT_PUSHPULL, LED_PIN);
+    gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_PIN);
 
     fwapp_systick_register_callback(fwapp_led_decrement_counter_cb);
 }

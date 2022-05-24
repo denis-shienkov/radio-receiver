@@ -6,19 +6,6 @@ CppApplication {
 
     Depends { name: "libopencm3" }
 
-    cpp.cLanguageVersion: "c99"
-    cpp.positionIndependentCode: false
-
-    cpp.commonCompilerFlags: [
-        "-Wextra",
-        "-Wimplicit-function-declaration",
-        "-Wmissing-prototypes",
-        "-Wredundant-decls",
-        "-Wshadow",
-        "-Wstrict-prototypes",
-        "-Wundef",
-    ]
-
     cpp.driverLinkerFlags: [
         "--static",
         "-nostartfiles",
@@ -33,33 +20,23 @@ CppApplication {
         "c", "gcc", "m", "nosys"
     ]
 
-    Properties {
-        condition: project.targetMcu === "stm32f1"
-        cpp.driverFlags: [
-            "-fdata-sections",
-            "-ffunction-sections",
-            "-fno-common",
-            "-mcpu=cortex-m3",
-            "-mfix-cortex-m3-ldrd",
-            "-msoft-float",
-            "-mthumb",
-            "-u_printf_float",
-        ]
-    }
+    cpp.driverFlags: [
+        "-u_printf_float",
+    ]
 
     files: [
         "fwapp.c",
         "fwapp.h",
-        "fwapp_adc.c",
-        "fwapp_adc.h",
+//        "fwapp_adc.c",
+//        "fwapp_adc.h",
         "fwapp_cbuf.c",
         "fwapp_cbuf.h",
         "fwapp_hid.c",
         "fwapp_hid.h",
         "fwapp_led.c",
         "fwapp_led.h",
-        "fwapp_proto.c",
-        "fwapp_proto.h",
+//        "fwapp_proto.c",
+//        "fwapp_proto.h",
         "fwapp_systick.c",
         "fwapp_systick.h",
         "fwapp_trace.c",

@@ -9,7 +9,7 @@
 #include <errno.h> // for errno
 
 // We use USART2 TX for traces (pin PA2).
-
+#define TRACE_TX            GPIO2
 #define TRACE_DATA_SIZE     512
 
 static uint8_t m_data[TRACE_DATA_SIZE] = {0};
@@ -60,8 +60,8 @@ void fwapp_trace_start(uint32_t baud_rate)
     // Enable usart interrupts.
     nvic_enable_irq(NVIC_USART2_IRQ);
     // Configure usart tx pin.
-    gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
-                  GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO_USART2_TX);
+    gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, TRACE_TX);
+    gpio_set_af(GPIOA, GPIO_AF7, TRACE_TX);
     // Setup usrt parameters.
     usart_set_baudrate(USART2, baud_rate);
     usart_set_databits(USART2, 8);
