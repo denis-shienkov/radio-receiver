@@ -9,6 +9,8 @@
 #include <stdio.h> // for printf
 #include <string.h> // for memset
 
+#include <math.h> // for sine
+
 #define USB_AUDIO_ALL_CHANNELS_NUMBER   (USB_AUDIO_CHANNELS_NUMBER + 1)
 
 enum uac_stream_status {
@@ -42,17 +44,36 @@ static struct usb_audio_ch_cfg {
     {SET_MUTED}  // Right channel.
 };
 
+static void fill_test_waveform_data(void)
+{
+    int16_t *positive_samples = (int16_t *)(m_sample_buffers[UAC_SAMPLE_BUF0].samples);
+    int16_t *negative_samples = (int16_t *)(m_sample_buffers[UAC_SAMPLE_BUF1].samples);
+    const int sine_samples_for_single_channel = SINE_SAMPLES_FOR_SOF / USB_AUDIO_CHANNELS_NUMBER;
+    const float deg_step = 90.0 / sine_samples_for_single_channel;
+    // Just transmit a boring sawtooth waveform on both channels.
+    for (int i = 0; i != sine_samples_for_single_channel; ++i) {
+        float deg = i * deg_step * USB_AUDIO_CHANNELS_NUMBER;
+        float rad = deg * 3.1415 / 180.0;
+        float d = sinf(rad) * 8196;
+        positive_samples[i*2] = d;
+        positive_samples[i*2+1] = d;
+        negative_samples[i*2] = -d;
+        negative_samples[i*2+1] = -d;
+    }
+}
+
 static void fwapp_uac_sof_cb(void)
 {
     if (m_uac_stream_status != UAC_STREAM_ENABLED)
         return;
-    if (!m_set_buf_cb)
-        return;
-    struct fwapp_uac_buffer *buf = &m_sample_buffers[m_sample_buf_index];
+//    if (!m_set_buf_cb)
+//        return;
+//    struct fwapp_uac_buffer *buf = &m_sample_buffers[m_sample_buf_index];
+
     // Toggle sample buffer index.
     m_sample_buf_index = (m_sample_buf_index == UAC_SAMPLE_BUF0) ? UAC_SAMPLE_BUF1
                                                                  : UAC_SAMPLE_BUF0;
-    m_set_buf_cb(buf);
+//    m_set_buf_cb(buf);
 }
 
 // Association interface configuration.
@@ -277,8 +298,13 @@ static void fwapp_uac_set_stream_status(enum uac_stream_status status)
 
     if (m_uac_stream_status == UAC_STREAM_ENABLED) {
         m_sample_buf_index = UAC_SAMPLE_BUF0;
-        for (uint8_t i = UAC_SAMPLE_BUF0; i < UAC_SAMPLE_BUFS_COUNT; ++i)
-            memset(m_sample_buffers[i].samples, 0, sizeof(m_sample_buffers[i].samples));
+
+        fill_test_waveform_data();
+//        for (uint8_t i = UAC_SAMPLE_BUF0; i < UAC_SAMPLE_BUFS_COUNT; ++i)
+//            memset(m_sample_buffers[i].samples, 0, sizeof(m_sample_buffers[i].samples));
+
+        // Trigger audio stream.
+        usbd_ep_write_packet(m_dev, USB_AUDIO_EP_IN_ADDRESS, NULL, 0);
     }
 }
 
