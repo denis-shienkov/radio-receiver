@@ -43,7 +43,6 @@ int main(void)
     rcc_periph_clock_enable(RCC_GPIOA); // usb + usart
     rcc_periph_clock_enable(RCC_GPIOC); // led
     rcc_periph_clock_enable(RCC_USART2);
-    rcc_periph_clock_enable(RCC_OTGFS); // otg_fs
 //    rcc_periph_clock_enable(RCC_TIM2);
 //    rcc_periph_clock_enable(RCC_ADC1);
 

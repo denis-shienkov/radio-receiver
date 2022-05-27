@@ -10,6 +10,8 @@
 #include <stdio.h> // for printf
 #include <string.h> // for memset
 
+#define USB_DPDM_PINS       (GPIO11 | GPIO12)
+
 static usbd_device *m_dev = NULL;
 static uint8_t m_control_buffer[USB_CONTROL_BUFFER_LENGTH] = {0};
 
@@ -73,23 +75,6 @@ static const char *m_strings[USB_STRINGS_NUMBER] = {
     "SI4730 AM/FM Radio Receiver Audio Stream", // Audio stream string.
 };
 
-static void fwapp_usb_reenumerate(void)
-{
-    // This is a somewhat common cheap hack to trigger device re-enumeration
-    // on startup. Assuming a fixed external pullup on D+, (For USB-FS)
-    // setting the pin to output, and driving it explicitly low effectively
-    // "removes" the pullup.  The subsequent USB init will "take over" the
-    // pin, and it will appear as a proper pullup to the host.
-    // The magic delay is somewhat arbitrary, no guarantees on USBIF
-    // compliance here, but "it works" in most places.
-
-//    gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-//                  GPIO_CNF_OUTPUT_PUSHPULL, GPIO12);
-//    gpio_clear(GPIOA, GPIO12);
-
-//    fwapp_delay_cycles(800000);
-}
-
 static void fwapp_usb_set_config_occurred(usbd_device *dev, uint16_t wValue)
 {
     (void)wValue;
@@ -111,10 +96,17 @@ static void fwapp_usb_sof_occurred(void)
     }
 }
 
+static void fwapp_usb_configure_data_pins(void)
+{
+    gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, USB_DPDM_PINS);
+    gpio_set_output_options(GPIOA, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, USB_DPDM_PINS);
+    gpio_set_af(GPIOA, GPIO_AF10, USB_DPDM_PINS);
+}
+
 static void fwapp_usb_setup(void)
 {
-    gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO11 | GPIO12);
-    gpio_set_af(GPIOA, GPIO_AF10, GPIO11 | GPIO12);
+    // Configure DM/DP usb pins.
+    fwapp_usb_configure_data_pins();
 
     m_dev = usbd_init(
         &otgfs_usb_driver,
@@ -143,7 +135,6 @@ static void fwapp_usb_setup(void)
 void fwapp_usb_start(void)
 {
     memset(m_sof_cbs, 0, sizeof(m_sof_cbs));
-    fwapp_usb_reenumerate();
     fwapp_usb_setup();
 }
 
