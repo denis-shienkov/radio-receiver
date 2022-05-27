@@ -105,7 +105,7 @@ Project {
 
         Export {
             Depends { name: "cpp" }
-            cpp.includePaths: [exportingProduct.includeBase, exportingProduct.generatedPath]
+            cpp.systemIncludePaths: [exportingProduct.includeBase, exportingProduct.generatedPath]
             cpp.defines: exportingProduct.targetDefines
             cpp.driverFlags: exportingProduct.targetFlags
             cpp.commonCompilerFlags: exportingProduct.compilerFlags
